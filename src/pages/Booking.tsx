@@ -12,13 +12,14 @@ type Step = "type" | "doctor" | "datetime" | "confirm";
 type BookingType = "online" | "clinic";
 
 const doctors = [
-  { id: 1, name: "Dr. Sarah Johnson", specialty: "Cardiologist", rating: 4.9, slots: 5 },
-  { id: 2, name: "Dr. Michael Chen", specialty: "Dermatologist", rating: 4.8, slots: 3 },
-  { id: 3, name: "Dr. Emily Davis", specialty: "Neurologist", rating: 4.9, slots: 7 },
-  { id: 4, name: "Dr. James Wilson", specialty: "Orthopedic", rating: 4.7, slots: 2 },
+  { id: 1, name: "د. سارة أحمد", specialty: "أمراض القلب", rating: 4.9, slots: 5 },
+  { id: 2, name: "د. محمد حسن", specialty: "الأمراض الجلدية", rating: 4.8, slots: 3 },
+  { id: 3, name: "د. نور الشريف", specialty: "المخ والأعصاب", rating: 4.9, slots: 7 },
+  { id: 4, name: "د. أحمد مصطفى", specialty: "العظام", rating: 4.7, slots: 2 },
+  { id: 5, name: "د. فاطمة الزهراء", specialty: "الأسنان", rating: 4.8, slots: 4 },
 ];
 
-const timeSlots = ["09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM"];
+const timeSlots = ["٠٩:٠٠ ص", "٠٩:٣٠ ص", "١٠:٠٠ ص", "١٠:٣٠ ص", "١١:٠٠ ص", "٠٢:٠٠ م", "٠٢:٣٠ م", "٠٣:٠٠ م", "٠٣:٣٠ م", "٠٤:٠٠ م"];
 
 export default function BookingPage() {
   const [step, setStep] = useState<Step>("type");
@@ -28,10 +29,10 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
   const steps: { key: Step; label: string }[] = [
-    { key: "type", label: "Type" },
-    { key: "doctor", label: "Doctor" },
-    { key: "datetime", label: "Date & Time" },
-    { key: "confirm", label: "Confirm" },
+    { key: "type", label: "نوع الزيارة" },
+    { key: "doctor", label: "اختيار الطبيب" },
+    { key: "datetime", label: "التاريخ والوقت" },
+    { key: "confirm", label: "تأكيد الحجز" },
   ];
 
   const stepIndex = steps.findIndex((s) => s.key === step);
@@ -43,10 +44,10 @@ export default function BookingPage() {
         <div className="container-narrow max-w-3xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground text-center mb-2">
-              Book an Appointment
+              حجز موعد
             </h1>
             <p className="text-center text-muted-foreground mb-10">
-              Choose your preferred consultation type and schedule a visit.
+              اختار نوع الاستشارة واحجز موعدك بكل سهولة
             </p>
           </motion.div>
 
@@ -54,86 +55,89 @@ export default function BookingPage() {
           <div className="flex items-center justify-center gap-2 mb-12">
             {steps.map((s, i) => (
               <div key={s.key} className="flex items-center gap-2">
-                <div
+                <motion.div
+                  animate={i <= stepIndex ? { scale: [1, 1.15, 1] } : {}}
+                  transition={{ duration: 0.3 }}
                   className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all",
-                    i <= stepIndex
-                      ? "gradient-hero-bg text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
+                    i <= stepIndex ? "gradient-hero-bg text-primary-foreground shadow-md shadow-primary/25" : "bg-muted text-muted-foreground"
                   )}
                 >
                   {i < stepIndex ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
-                </div>
+                </motion.div>
                 <span className={cn("text-sm hidden sm:block", i <= stepIndex ? "text-foreground font-medium" : "text-muted-foreground")}>
                   {s.label}
                 </span>
-                {i < steps.length - 1 && <div className={cn("w-8 h-0.5 mx-1", i < stepIndex ? "bg-primary" : "bg-muted")} />}
+                {i < steps.length - 1 && (
+                  <div className={cn("w-8 h-0.5 mx-1 transition-all", i < stepIndex ? "bg-primary" : "bg-muted")} />
+                )}
               </div>
             ))}
           </div>
 
           {/* Step: Type */}
           {step === "type" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid sm:grid-cols-2 gap-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid sm:grid-cols-2 gap-6">
               {[
-                { type: "online" as BookingType, icon: Video, title: "Online Consultation", desc: "Video call with a doctor from anywhere" },
-                { type: "clinic" as BookingType, icon: MapPin, title: "In-Clinic Visit", desc: "Visit our clinic for in-person examination" },
+                { type: "online" as BookingType, icon: Video, title: "استشارة أونلاين", desc: "مكالمة فيديو مع الطبيب من أي مكان" },
+                { type: "clinic" as BookingType, icon: MapPin, title: "زيارة العيادة", desc: "زيارة العيادة للكشف المباشر" },
               ].map((opt) => (
-                <button
+                <motion.button
                   key={opt.type}
+                  whileHover={{ y: -4, boxShadow: "0 20px 40px -15px rgba(0,0,0,0.1)" }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => { setBookingType(opt.type); setStep("doctor"); }}
-                  className={cn(
-                    "glass-card rounded-2xl p-8 text-left hover-lift transition-all",
-                    bookingType === opt.type && "ring-2 ring-primary"
-                  )}
+                  className="glass-card rounded-2xl p-8 text-right transition-all"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <motion.div
+                    whileHover={{ rotate: 10, scale: 1.1 }}
+                    className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4"
+                  >
                     <opt.icon className="w-7 h-7 text-primary" />
-                  </div>
+                  </motion.div>
                   <h3 className="font-display font-semibold text-lg text-foreground">{opt.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{opt.desc}</p>
-                </button>
+                </motion.button>
               ))}
             </motion.div>
           )}
 
           {/* Step: Doctor */}
           {step === "doctor" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              {doctors.map((doc) => (
-                <button
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+              {doctors.map((doc, i) => (
+                <motion.button
                   key={doc.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  whileHover={{ x: -4 }}
                   onClick={() => { setSelectedDoctor(doc.id); setStep("datetime"); }}
-                  className={cn(
-                    "glass-card rounded-2xl p-5 w-full text-left hover-lift flex items-center gap-4 transition-all",
-                    selectedDoctor === doc.id && "ring-2 ring-primary"
-                  )}
+                  className={cn("glass-card rounded-2xl p-5 w-full text-right flex items-center gap-4 transition-all", selectedDoctor === doc.id && "ring-2 ring-primary")}
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0">
-                    👨‍⚕️
-                  </div>
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0">👨‍⚕️</div>
                   <div className="flex-1">
                     <h3 className="font-display font-semibold text-foreground">{doc.name}</h3>
                     <p className="text-sm text-primary">{doc.specialty}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left">
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 fill-medical-gold text-medical-gold" />
                       <span className="text-sm font-medium">{doc.rating}</span>
                     </div>
-                    <span className="text-xs text-medical-green">{doc.slots} slots</span>
+                    <span className="text-xs text-medical-green">{doc.slots} مواعيد</span>
                   </div>
-                </button>
+                </motion.button>
               ))}
-              <Button variant="ghost" onClick={() => setStep("type")} className="text-muted-foreground">← Back</Button>
+              <Button variant="ghost" onClick={() => setStep("type")} className="text-muted-foreground">→ رجوع</Button>
             </motion.div>
           )}
 
           {/* Step: Date & Time */}
           {step === "datetime" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
               <div className="glass-card rounded-2xl p-6">
-                <h3 className="font-display font-semibold mb-4 text-foreground">Select Date</h3>
+                <h3 className="font-display font-semibold mb-4 text-foreground">اختار التاريخ</h3>
                 <CalendarUI
                   mode="single"
                   selected={selectedDate}
@@ -142,37 +146,31 @@ export default function BookingPage() {
                   className="pointer-events-auto mx-auto"
                 />
               </div>
-
               {selectedDate && (
-                <div className="glass-card rounded-2xl p-6">
-                  <h3 className="font-display font-semibold mb-4 text-foreground">Select Time</h3>
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
+                  <h3 className="font-display font-semibold mb-4 text-foreground">اختار الوقت</h3>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {timeSlots.map((t) => (
-                      <button
+                      <motion.button
                         key={t}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => setSelectedTime(t)}
                         className={cn(
                           "py-2.5 px-3 rounded-xl text-sm font-medium transition-all",
-                          selectedTime === t
-                            ? "gradient-hero-bg text-primary-foreground"
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          selectedTime === t ? "gradient-hero-bg text-primary-foreground shadow-md" : "bg-muted text-muted-foreground hover:bg-muted/80"
                         )}
                       >
                         {t}
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
-
               <div className="flex gap-3">
-                <Button variant="ghost" onClick={() => setStep("doctor")} className="text-muted-foreground">← Back</Button>
-                <Button
-                  onClick={() => setStep("confirm")}
-                  disabled={!selectedDate || !selectedTime}
-                  className="gradient-hero-bg text-primary-foreground border-0 flex-1"
-                >
-                  Continue
+                <Button variant="ghost" onClick={() => setStep("doctor")} className="text-muted-foreground">→ رجوع</Button>
+                <Button onClick={() => setStep("confirm")} disabled={!selectedDate || !selectedTime} className="gradient-hero-bg text-primary-foreground border-0 flex-1">
+                  متابعة
                 </Button>
               </div>
             </motion.div>
@@ -181,20 +179,25 @@ export default function BookingPage() {
           {/* Step: Confirm */}
           {step === "confirm" && (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card rounded-2xl p-8 text-center">
-              <div className="w-20 h-20 rounded-full bg-medical-green/10 flex items-center justify-center mx-auto mb-6">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.2 }}
+                className="w-20 h-20 rounded-full bg-medical-green/10 flex items-center justify-center mx-auto mb-6"
+              >
                 <CheckCircle2 className="w-10 h-10 text-medical-green" />
-              </div>
-              <h2 className="font-display text-2xl font-bold text-foreground mb-2">Booking Confirmed!</h2>
-              <p className="text-muted-foreground mb-6">Your appointment has been successfully scheduled.</p>
-              <div className="bg-muted rounded-xl p-4 space-y-2 text-sm text-left max-w-sm mx-auto">
-                <div className="flex justify-between"><span className="text-muted-foreground">Type:</span><span className="font-medium text-foreground">{bookingType === "online" ? "Online" : "In-Clinic"}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Doctor:</span><span className="font-medium text-foreground">{doctors.find((d) => d.id === selectedDoctor)?.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Date:</span><span className="font-medium text-foreground">{selectedDate?.toLocaleDateString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Time:</span><span className="font-medium text-foreground">{selectedTime}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Status:</span><Badge className="bg-medical-green/10 text-medical-green border-0">Pending</Badge></div>
+              </motion.div>
+              <h2 className="font-display text-2xl font-bold text-foreground mb-2">تم تأكيد الحجز! 🎉</h2>
+              <p className="text-muted-foreground mb-6">تم حجز موعدك بنجاح. هتوصلك رسالة تأكيد على الموبايل.</p>
+              <div className="bg-muted rounded-xl p-4 space-y-3 text-sm text-right max-w-sm mx-auto">
+                <div className="flex justify-between"><span className="text-muted-foreground">نوع الزيارة:</span><span className="font-medium text-foreground">{bookingType === "online" ? "أونلاين" : "زيارة عيادة"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">الطبيب:</span><span className="font-medium text-foreground">{doctors.find((d) => d.id === selectedDoctor)?.name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">التاريخ:</span><span className="font-medium text-foreground">{selectedDate?.toLocaleDateString("ar-EG")}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">الوقت:</span><span className="font-medium text-foreground">{selectedTime}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">الحالة:</span><Badge className="bg-medical-green/10 text-medical-green border-0">في الانتظار</Badge></div>
               </div>
               <Button className="mt-6 gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); }}>
-                Book Another Appointment
+                حجز موعد آخر
               </Button>
             </motion.div>
           )}

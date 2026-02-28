@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&family=Tajawal:wght@300;400;500;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -64,7 +64,7 @@
     --glass-border: 0 0% 100% / 0.3;
     --glass-shadow: 210 40% 11% / 0.06;
 
-    /* Gradients (defined as full values for use in CSS) */
+    /* Gradients */
     --gradient-hero: linear-gradient(135deg, hsl(174 62% 40%), hsl(220 70% 55%));
     --gradient-coral: linear-gradient(135deg, hsl(12 80% 62%), hsl(40 85% 55%));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 20% 98%));
@@ -120,9 +120,10 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    direction: rtl;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Cairo', sans-serif;
   }
 }
 
@@ -144,13 +145,23 @@
     background: var(--gradient-coral);
   }
   .hover-lift {
-    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+    @apply transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl;
   }
   .section-padding {
     @apply py-20 md:py-28 px-4 md:px-8;
   }
   .container-narrow {
     @apply max-w-7xl mx-auto;
+  }
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--primary) / 0.08) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
   }
 }
 
@@ -167,6 +178,12 @@
   .animate-pulse-soft {
     animation: pulse-soft 3s ease-in-out infinite;
   }
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  .animate-spin-slow {
+    animation: spin 8s linear infinite;
+  }
 }
 
 @keyframes float {
@@ -177,4 +194,16 @@
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
+}
+
+@keyframes blob {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+  50% { border-radius: 50% 60% 30% 60% / 30% 60% 70% 40%; }
+  75% { border-radius: 60% 40% 60% 30% / 60% 40% 30% 60%; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

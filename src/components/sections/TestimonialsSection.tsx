@@ -1,16 +1,24 @@
-import { motion } from "framer-motion";
-import { Star, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Star, ChevronLeft, ChevronRight, Quote } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const testimonials = [
-  { name: "Maria Santos", text: "The booking experience was seamless! Got an appointment within an hour and the doctor was incredibly professional.", rating: 5, role: "Patient" },
-  { name: "Ahmed Hassan", text: "Online consultation saved me a trip to the clinic. The video quality was great and I received my prescription right away.", rating: 5, role: "Patient" },
-  { name: "Lisa Chen", text: "I've been coming to MediCare for years. Their modern approach to healthcare is unmatched. Highly recommend!", rating: 4, role: "Regular Patient" },
-  { name: "John Williams", text: "The booking tracker is amazing. I always know exactly when my appointment is and how long the wait will be.", rating: 5, role: "Patient" },
+  { name: "ماريا سعيد", text: "تجربة الحجز كانت سهلة جداً! حصلت على موعد في خلال ساعة والدكتور كان محترف جداً. شكراً ميديكير!", rating: 5, role: "مريضة" },
+  { name: "أحمد حسن", text: "الاستشارة الأونلاين وفرت عليا وقت ومجهود. جودة الفيديو كانت ممتازة والدكتور كتبلي الروشتة فوراً.", rating: 5, role: "مريض" },
+  { name: "ليلى محمد", text: "بقالي سنين بتابع مع ميديكير. أسلوبهم الحديث في الرعاية الصحية مالوش مثيل. أنصح بيهم جداً!", rating: 5, role: "مريضة منتظمة" },
+  { name: "عمر عبدالله", text: "ميزة متابعة الحجز ممتازة. دايماً عارف موعدي إمتى ومستني قد إيه. خدمة ممتازة فعلاً.", rating: 5, role: "مريض" },
 ];
 
 export default function TestimonialsSection() {
   const [current, setCurrent] = useState(0);
+
+  // Auto-play
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrent((c) => (c + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const next = () => setCurrent((c) => (c + 1) % testimonials.length);
   const prev = () => setCurrent((c) => (c - 1 + testimonials.length) % testimonials.length);
@@ -26,59 +34,75 @@ export default function TestimonialsSection() {
           viewport={{ once: true }}
           className="text-center mb-14"
         >
-          <span className="text-primary font-medium text-sm uppercase tracking-wider">Testimonials</span>
+          <span className="text-primary font-medium text-sm uppercase tracking-wider">آراء المرضى</span>
           <h2 className="font-display text-3xl md:text-4xl font-bold mt-2 text-foreground">
-            What Our Patients Say
+            ماذا يقول مرضانا عنا
           </h2>
         </motion.div>
 
-        <motion.div
-          key={current}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4 }}
-          className="glass-card rounded-3xl p-8 md:p-12 text-center"
-        >
-          <div className="flex justify-center gap-1 mb-6">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                className={`w-5 h-5 ${i < t.rating ? "fill-medical-gold text-medical-gold" : "text-muted"}`}
-              />
-            ))}
-          </div>
-          <blockquote className="text-lg md:text-xl text-foreground leading-relaxed mb-6 font-medium italic">
-            "{t.text}"
-          </blockquote>
-          <div className="font-display font-semibold text-foreground">{t.name}</div>
-          <div className="text-sm text-muted-foreground">{t.role}</div>
-        </motion.div>
+        <div className="relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={current}
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.97 }}
+              transition={{ duration: 0.4 }}
+              className="glass-card rounded-3xl p-8 md:p-12 text-center relative"
+            >
+              <Quote className="w-10 h-10 text-primary/20 mx-auto mb-4" />
+              <div className="flex justify-center gap-1 mb-6">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <Star
+                      className={`w-5 h-5 ${i < t.rating ? "fill-medical-gold text-medical-gold" : "text-muted"}`}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+              <blockquote className="text-lg md:text-xl text-foreground leading-relaxed mb-6 font-medium">
+                "{t.text}"
+              </blockquote>
+              <div className="font-display font-semibold text-foreground">{t.name}</div>
+              <div className="text-sm text-muted-foreground">{t.role}</div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
         {/* Navigation */}
         <div className="flex justify-center gap-3 mt-8">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={prev}
             className="w-10 h-10 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors"
           >
-            <ChevronLeft className="w-5 h-5 text-foreground" />
-          </button>
+            <ChevronRight className="w-5 h-5 text-foreground" />
+          </motion.button>
           <div className="flex items-center gap-2">
             {testimonials.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
-                  i === current ? "bg-primary w-6" : "bg-muted-foreground/30"
+                className={`h-2.5 rounded-full transition-all duration-300 ${
+                  i === current ? "bg-primary w-8" : "bg-muted-foreground/30 w-2.5"
                 }`}
               />
             ))}
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={next}
             className="w-10 h-10 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors"
           >
-            <ChevronRight className="w-5 h-5 text-foreground" />
-          </button>
+            <ChevronLeft className="w-5 h-5 text-foreground" />
+          </motion.button>
         </div>
       </div>
     </section>

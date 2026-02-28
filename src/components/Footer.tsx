@@ -2,6 +2,7 @@ import { Heart, Mail, Phone, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
 
 export default function Footer() {
   return (
@@ -15,21 +16,27 @@ export default function Footer() {
                 <Heart className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-display font-bold text-xl">
-                Medi<span className="text-primary">Care</span>
+                ميدي<span className="text-primary">كير</span>
               </span>
             </Link>
             <p className="text-background/60 text-sm leading-relaxed">
-              Your trusted partner in health. Modern medical care with compassion and cutting-edge technology.
+              شريكك الموثوق في الرعاية الصحية. نقدم خدمات طبية حديثة بأعلى مستوى من الاحترافية والتكنولوجيا المتقدمة في مصر.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-display font-semibold mb-4">Quick Links</h4>
+            <h4 className="font-display font-semibold mb-4">روابط سريعة</h4>
             <ul className="space-y-2 text-sm text-background/60">
-              {["Home", "Doctors", "Book Appointment", "Articles", "Contact"].map((link) => (
-                <li key={link}>
-                  <a href="#" className="hover:text-primary transition-colors">{link}</a>
+              {[
+                { label: "الرئيسية", path: "/" },
+                { label: "الأطباء", path: "/doctors" },
+                { label: "حجز موعد", path: "/booking" },
+                { label: "المقالات", path: "/articles" },
+                { label: "تواصل معنا", path: "/contact" },
+              ].map((link) => (
+                <li key={link.label}>
+                  <Link to={link.path} className="hover:text-primary transition-colors">{link.label}</Link>
                 </li>
               ))}
             </ul>
@@ -37,29 +44,29 @@ export default function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="font-display font-semibold mb-4">Contact</h4>
+            <h4 className="font-display font-semibold mb-4">تواصل معنا</h4>
             <ul className="space-y-3 text-sm text-background/60">
-              <li className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary" /> +1 (555) 000-1234</li>
-              <li className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /> hello@medicare.com</li>
-              <li className="flex items-start gap-2"><MapPin className="w-4 h-4 text-primary mt-0.5" /> 123 Health Avenue, Medical City, MC 10001</li>
+              <li className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary" /> 01012345678</li>
+              <li className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /> info@medicare-eg.com</li>
+              <li className="flex items-start gap-2"><MapPin className="w-4 h-4 text-primary mt-0.5" /> ١٢٣ شارع التحرير، الدقي، الجيزة، مصر</li>
             </ul>
           </div>
 
           {/* Newsletter */}
           <div>
-            <h4 className="font-display font-semibold mb-4">Newsletter</h4>
-            <p className="text-sm text-background/60 mb-4">Stay updated with the latest health tips and news.</p>
+            <h4 className="font-display font-semibold mb-4">النشرة البريدية</h4>
+            <p className="text-sm text-background/60 mb-4">اشترك في نشرتنا البريدية لتصلك آخر النصائح الطبية والعروض.</p>
             <div className="flex gap-2">
-              <Input placeholder="Your email" className="bg-background/10 border-background/20 text-background placeholder:text-background/40" />
+              <Input placeholder="البريد الإلكتروني" className="bg-background/10 border-background/20 text-background placeholder:text-background/40" />
               <Button size="sm" className="gradient-hero-bg text-primary-foreground border-0 shrink-0">
-                Subscribe
+                اشترك
               </Button>
             </div>
           </div>
         </div>
 
         <div className="border-t border-background/10 pt-8 text-center text-sm text-background/40">
-          © 2026 MediCare. All rights reserved.
+          © ٢٠٢٦ ميديكير. جميع الحقوق محفوظة.
         </div>
       </div>
     </footer>
