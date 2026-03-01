@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, Phone } from "lucide-react";
+import { Menu, X, Heart, Phone, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
@@ -14,7 +14,12 @@ const navLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    setIsLoggedIn(localStorage.getItem("medicare_logged_in") === "true");
+  }, [location]);
 
   return (
     <nav className="glass-nav fixed top-0 left-0 right-0 z-50">
@@ -48,19 +53,31 @@ export default function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
-            <Phone className="w-4 h-4" />
-            الطوارئ
-          </Button>
-          <Link to="/login">
-            <Button size="sm" variant="outline">
-              تسجيل الدخول
+          <Link to="/contact">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+              <Phone className="w-4 h-4" />
+              الطوارئ
             </Button>
           </Link>
+          {isLoggedIn ? (
+            <>
+              <Link to="/dashboard">
+                <Button size="sm" variant="outline" className="gap-2">
+                  <LayoutDashboard className="w-4 h-4" />
+                  لوحة التحكم
+                </Button>
+              </Link>
+              <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => { localStorage.removeItem("medicare_logged_in"); setIsLoggedIn(false); }}>
+                خروج
+              </Button>
+            </>
+          ) : (
+            <Link to="/login">
+              <Button size="sm" variant="outline">تسجيل الدخول</Button>
+            </Link>
+          )}
           <Link to="/booking">
-            <Button size="sm" className="gradient-hero-bg text-primary-foreground border-0 shadow-lg shadow-primary/25">
-              احجز الآن
-            </Button>
+            <Button size="sm" className="gradient-hero-bg text-primary-foreground border-0 shadow-lg shadow-primary/25">احجز الآن</Button>
           </Link>
         </div>
 
@@ -105,12 +122,25 @@ export default function Navbar() {
                 </motion.div>
               ))}
               <div className="pt-3 flex gap-2">
-                <Link to="/login" className="flex-1">
-                  <Button variant="outline" className="w-full">تسجيل الدخول</Button>
-                </Link>
-                <Link to="/booking" className="flex-1">
-                  <Button className="w-full gradient-hero-bg text-primary-foreground border-0">احجز الآن</Button>
-                </Link>
+                {isLoggedIn ? (
+                  <>
+                    <Link to="/dashboard" className="flex-1" onClick={() => setMobileOpen(false)}>
+                      <Button variant="outline" className="w-full gap-2"><LayoutDashboard className="w-4 h-4" />لوحة التحكم</Button>
+                    </Link>
+                    <Link to="/booking" className="flex-1" onClick={() => setMobileOpen(false)}>
+                      <Button className="w-full gradient-hero-bg text-primary-foreground border-0">احجز الآن</Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/login" className="flex-1" onClick={() => setMobileOpen(false)}>
+                      <Button variant="outline" className="w-full">تسجيل الدخول</Button>
+                    </Link>
+                    <Link to="/booking" className="flex-1" onClick={() => setMobileOpen(false)}>
+                      <Button className="w-full gradient-hero-bg text-primary-foreground border-0">احجز الآن</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

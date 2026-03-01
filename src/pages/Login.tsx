@@ -4,11 +4,20 @@ import { Heart, Mail, Lock, User, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem("medicare_logged_in", "true");
+    toast.success(isLogin ? "تم تسجيل الدخول بنجاح! 🎉" : "تم إنشاء الحساب بنجاح! 🎉");
+    navigate("/dashboard");
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -45,7 +54,7 @@ export default function LoginPage() {
                 : "اشترك الآن واحجز أول موعد مع أفضل الأطباء في مصر"}
             </p>
 
-            <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               {!isLogin && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
                   <Label className="text-sm font-medium text-foreground mb-1.5 block">الاسم الكامل</Label>
