@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, Phone, LayoutDashboard } from "lucide-react";
+import { Menu, X, Heart, Phone, LayoutDashboard, Moon, Sun, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/components/ThemeProvider";
 
 const navLinks = [
   { name: "الرئيسية", path: "/" },
@@ -14,17 +16,13 @@ const navLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, isAdmin, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-
-  useEffect(() => {
-    setIsLoggedIn(localStorage.getItem("medicare_logged_in") === "true");
-  }, [location]);
 
   return (
     <nav className="glass-nav fixed top-0 left-0 right-0 z-50">
       <div className="container-narrow flex items-center justify-between h-16 md:h-20 px-4 md:px-8">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-xl gradient-hero-bg flex items-center justify-center">
             <Heart className="w-5 h-5 text-primary-foreground" />
@@ -34,7 +32,6 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             <Link
@@ -51,23 +48,33 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Desktop CTA */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground">
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
           <Link to="/contact">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
               <Phone className="w-4 h-4" />
               الطوارئ
             </Button>
           </Link>
-          {isLoggedIn ? (
+          {user ? (
             <>
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button size="sm" variant="outline" className="gap-2 border-medical-coral text-medical-coral">
+                    <Shield className="w-4 h-4" />
+                    الأدمن
+                  </Button>
+                </Link>
+              )}
               <Link to="/dashboard">
                 <Button size="sm" variant="outline" className="gap-2">
                   <LayoutDashboard className="w-4 h-4" />
                   لوحة التحكم
                 </Button>
               </Link>
-              <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => { localStorage.removeItem("medicare_logged_in"); setIsLoggedIn(false); }}>
+              <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={signOut}>
                 خروج
               </Button>
             </>
@@ -81,16 +88,16 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile Toggle */}
-        <button
-          className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
-          onClick={() => setMobileOpen(!mobileOpen)}
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex md:hidden items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground">
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
+          <button className="p-2 rounded-lg hover:bg-muted transition-colors" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -102,12 +109,7 @@ export default function Navbar() {
           >
             <div className="p-4 space-y-1">
               {navLinks.map((link, i) => (
-                <motion.div
-                  key={link.path}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
+                <motion.div key={link.path} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
                   <Link
                     to={link.path}
                     onClick={() => setMobileOpen(false)}
@@ -122,7 +124,7 @@ export default function Navbar() {
                 </motion.div>
               ))}
               <div className="pt-3 flex gap-2">
-                {isLoggedIn ? (
+                {user ? (
                   <>
                     <Link to="/dashboard" className="flex-1" onClick={() => setMobileOpen(false)}>
                       <Button variant="outline" className="w-full gap-2"><LayoutDashboard className="w-4 h-4" />لوحة التحكم</Button>
