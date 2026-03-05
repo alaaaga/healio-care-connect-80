@@ -56,6 +56,41 @@ export default function DashboardPage() {
       setLoadingData(false);
     };
     fetchData();
+
+    // Realtime: listen for new notifications
+    const notifChannel = supabase
+      .channel('user-notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        setNotifications((prev) => [payload.new as any, ...prev]);
+        toast.info((payload.new as any).message);
+      })
+      .subscribe();
+
+    // Realtime: listen for booking updates
+    const bookingChannel = supabase
+      .channel('user-bookings')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'bookings',
+        filter: `user_id=eq.${user.id}`,
+      }, async (payload) => {
+        const updated = payload.new as any;
+        // Fetch doctor info for the updated booking
+        const { data: docData } = await supabase.from("doctors").select("name, specialty").eq("id", updated.doctor_id).single();
+        setBookings((prev) => prev.map((b) => b.id === updated.id ? { ...updated, doctors: docData } : b));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notifChannel);
+      supabase.removeChannel(bookingChannel);
+    };
   }, [user]);
 
   const cancelBooking = async (id: string) => {
@@ -270,18 +305,43 @@ export default function DashboardPage() {
                     <h3 className="font-display font-bold text-foreground mb-2">مافيش إشعارات</h3>
                   </div>
                 ) : (
+                  <div className="space-y-1 mb-4">
+                    {notifications.filter((n) => !n.is_read).length > 0 && (
+                      <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={async () => {
+                        await supabase.from("notifications").update({ is_read: true }).eq("user_id", user!.id).eq("is_read", false);
+                        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+                      }}>تعليم الكل كمقروء</Button>
+                    )}
+                  </div>
+                )}
+                {notifications.length > 0 && (
                   <div className="space-y-3">
-                    {notifications.map((notif, i) => (
-                      <motion.div key={notif.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className={`glass-card rounded-xl p-4 flex items-start gap-3 ${!notif.is_read ? "border-r-4 border-r-primary" : "opacity-60"}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${!notif.is_read ? "bg-primary/10" : "bg-muted"}`}>
-                          <Bell className={`w-4 h-4 ${!notif.is_read ? "text-primary" : "text-muted-foreground"}`} />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm text-foreground">{notif.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{new Date(notif.created_at).toLocaleDateString("ar-EG")}</p>
-                        </div>
-                      </motion.div>
-                    ))}
+                    <AnimatePresence>
+                      {notifications.map((notif, i) => {
+                        const typeIcon = notif.type === 'success' ? CheckCircle2 : notif.type === 'error' ? XCircle : Bell;
+                        const TypeIcon = typeIcon;
+                        const typeColor = notif.type === 'success' ? 'text-medical-green' : notif.type === 'error' ? 'text-destructive' : 'text-primary';
+                        return (
+                          <motion.div key={notif.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.03 }}
+                            className={`glass-card rounded-xl p-4 flex items-start gap-3 cursor-pointer transition-all ${!notif.is_read ? "border-r-4 border-r-primary" : "opacity-60"}`}
+                            onClick={async () => {
+                              if (!notif.is_read) {
+                                await supabase.from("notifications").update({ is_read: true }).eq("id", notif.id);
+                                setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, is_read: true } : n));
+                              }
+                            }}
+                          >
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${!notif.is_read ? "bg-primary/10" : "bg-muted"}`}>
+                              <TypeIcon className={`w-4 h-4 ${!notif.is_read ? typeColor : "text-muted-foreground"}`} />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm text-foreground">{notif.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{new Date(notif.created_at).toLocaleDateString("ar-EG", { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
                   </div>
                 )}
               </TabsContent>
