@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("bookings");
   const [bookings, setBookings] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
