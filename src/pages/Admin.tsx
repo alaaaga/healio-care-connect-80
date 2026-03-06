@@ -58,16 +58,26 @@ export default function AdminPage() {
     const fetchAll = async () => {
       const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }] = await Promise.all([
         supabase.from("doctors").select("*").order("created_at", { ascending: false }),
-        supabase.from("bookings").select("*, doctors(name, specialty), profiles(full_name)").order("created_at", { ascending: false }),
+        supabase.from("bookings").select("*, doctors(name, specialty)").order("created_at", { ascending: false }),
         supabase.from("articles").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-        supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date, profiles(full_name))").order("created_at", { ascending: false }),
+        supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date)").order("created_at", { ascending: false }),
       ]);
+      // Map patient names from profiles
+      const profileMap = new Map((p || []).map((prof: any) => [prof.user_id, prof.full_name]));
+      const bookingsWithNames = (b || []).map((booking: any) => ({
+        ...booking,
+        patient_name: profileMap.get(booking.user_id) || "مستخدم",
+      }));
+      const prescsWithNames = (pr || []).map((presc: any) => ({
+        ...presc,
+        patient_name: profileMap.get(presc.patient_id) || "مستخدم",
+      }));
       setDoctors(d || []);
-      setBookings(b || []);
+      setBookings(bookingsWithNames);
       setArticles(a || []);
       setProfiles(p || []);
-      setPrescriptions(pr || []);
+      setPrescriptions(prescsWithNames);
       setLoadingData(false);
     };
     fetchAll();
@@ -257,7 +267,7 @@ export default function AdminPage() {
                     {bookings.slice(0, 5).map((b) => (
                       <div key={b.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                         <div>
-                          <p className="text-sm font-medium text-foreground">{b.profiles?.full_name || "مستخدم"}</p>
+                          <p className="text-sm font-medium text-foreground">{b.patient_name}</p>
                           <p className="text-xs text-muted-foreground">{b.doctors?.name} • {b.booking_date}</p>
                         </div>
                         {statusBadge(b.status)}
@@ -362,7 +372,7 @@ export default function AdminPage() {
                   <TableBody>
                     {filteredBookings.map((b) => (
                       <TableRow key={b.id}>
-                        <TableCell className="font-medium">{b.profiles?.full_name || "مستخدم"}</TableCell>
+                        <TableCell className="font-medium">{b.patient_name}</TableCell>
                         <TableCell>{b.doctors?.name}</TableCell>
                         <TableCell>{b.booking_date} {b.booking_time}</TableCell>
                         <TableCell>{b.type === "online" ? "أونلاين" : "عيادة"}</TableCell>
@@ -417,7 +427,7 @@ export default function AdminPage() {
                           <SelectContent>
                             {bookings.filter((b) => b.status === "confirmed" || b.status === "completed").map((b) => (
                               <SelectItem key={b.id} value={b.id}>
-                                {b.profiles?.full_name || "مستخدم"} - {b.doctors?.name} ({b.booking_date})
+                                {b.patient_name} - {b.doctors?.name} ({b.booking_date})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -448,7 +458,7 @@ export default function AdminPage() {
                   <TableBody>
                     {prescriptions.map((pr) => (
                       <TableRow key={pr.id}>
-                        <TableCell className="font-medium">{pr.bookings?.profiles?.full_name || "مستخدم"}</TableCell>
+                        <TableCell className="font-medium">{pr.patient_name}</TableCell>
                         <TableCell>{pr.doctors?.name}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{pr.diagnosis}</TableCell>
                         <TableCell>

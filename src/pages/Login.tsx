@@ -105,11 +105,11 @@ export default function LoginPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <Label className="text-sm font-medium text-foreground">كلمة المرور</Label>
-                  {isLogin && (
-                    <button type="button" className="text-xs text-primary hover:underline">
-                      نسيت كلمة المرور؟
-                    </button>
-                  )}
+                   {isLogin && (
+                     <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                       نسيت كلمة المرور؟
+                     </Link>
+                   )}
                 </div>
                 <div className="relative">
                   <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
