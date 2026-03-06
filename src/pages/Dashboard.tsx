@@ -229,6 +229,9 @@ export default function DashboardPage() {
                     </span>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="prescriptions" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Pill className="w-4 h-4" />روشتاتي
+                </TabsTrigger>
                 <TabsTrigger value="profile" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <User className="w-4 h-4" />بياناتي
                 </TabsTrigger>
