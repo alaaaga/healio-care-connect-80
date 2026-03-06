@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Calendar, FileText, Stethoscope, TrendingUp, CheckCircle2, Clock, XCircle,
-  Plus, Trash2, Edit, Shield
+  Plus, Trash2, Edit, Shield, Pill, Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,15 +29,22 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [articles, setArticles] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [bookingFilter, setBookingFilter] = useState("all");
 
   // Doctor form
   const [docForm, setDocForm] = useState({ name: "", specialty: "", location: "", price: 0, bio: "" });
   const [docDialogOpen, setDocDialogOpen] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<any>(null);
 
   // Article form
   const [artForm, setArtForm] = useState({ title: "", content: "", excerpt: "", category: "عام", author: "فريق ميديكير" });
   const [artDialogOpen, setArtDialogOpen] = useState(false);
+
+  // Prescription form
+  const [prescForm, setPrescForm] = useState({ booking_id: "", doctor_id: "", patient_id: "", diagnosis: "", medications: "", notes: "" });
+  const [prescDialogOpen, setPrescDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -49,30 +56,54 @@ export default function AdminPage() {
   useEffect(() => {
     if (!user || !isAdmin) return;
     const fetchAll = async () => {
-      const [{ data: d }, { data: b }, { data: a }, { data: p }] = await Promise.all([
+      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }] = await Promise.all([
         supabase.from("doctors").select("*").order("created_at", { ascending: false }),
         supabase.from("bookings").select("*, doctors(name, specialty), profiles(full_name)").order("created_at", { ascending: false }),
         supabase.from("articles").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date, profiles(full_name))").order("created_at", { ascending: false }),
       ]);
       setDoctors(d || []);
       setBookings(b || []);
       setArticles(a || []);
       setProfiles(p || []);
+      setPrescriptions(pr || []);
       setLoadingData(false);
     };
     fetchAll();
   }, [user, isAdmin]);
 
-  const addDoctor = async () => {
-    const { error } = await supabase.from("doctors").insert({ ...docForm, is_active: true, consultation_types: ["clinic", "online"] });
-    if (!error) {
-      toast.success("تم إضافة الطبيب");
-      setDocDialogOpen(false);
-      setDocForm({ name: "", specialty: "", location: "", price: 0, bio: "" });
-      const { data } = await supabase.from("doctors").select("*").order("created_at", { ascending: false });
-      setDoctors(data || []);
-    } else toast.error("حدث خطأ");
+  // Doctor CRUD
+  const openEditDoctor = (doc: any) => {
+    setEditingDoc(doc);
+    setDocForm({ name: doc.name, specialty: doc.specialty, location: doc.location, price: doc.price, bio: doc.bio || "" });
+    setDocDialogOpen(true);
+  };
+
+  const openAddDoctor = () => {
+    setEditingDoc(null);
+    setDocForm({ name: "", specialty: "", location: "", price: 0, bio: "" });
+    setDocDialogOpen(true);
+  };
+
+  const saveDoctor = async () => {
+    if (editingDoc) {
+      const { error } = await supabase.from("doctors").update(docForm).eq("id", editingDoc.id);
+      if (!error) {
+        toast.success("تم تعديل بيانات الطبيب");
+        setDoctors((prev) => prev.map((d) => d.id === editingDoc.id ? { ...d, ...docForm } : d));
+      } else toast.error("حدث خطأ");
+    } else {
+      const { error } = await supabase.from("doctors").insert({ ...docForm, is_active: true, consultation_types: ["clinic", "online"] });
+      if (!error) {
+        toast.success("تم إضافة الطبيب");
+        const { data } = await supabase.from("doctors").select("*").order("created_at", { ascending: false });
+        setDoctors(data || []);
+      } else toast.error("حدث خطأ");
+    }
+    setDocDialogOpen(false);
+    setEditingDoc(null);
+    setDocForm({ name: "", specialty: "", location: "", price: 0, bio: "" });
   };
 
   const deleteDoctor = async (id: string) => {
@@ -81,6 +112,7 @@ export default function AdminPage() {
     toast.success("تم حذف الطبيب");
   };
 
+  // Article CRUD
   const addArticle = async () => {
     const { error } = await supabase.from("articles").insert({ ...artForm, is_published: true });
     if (!error) {
@@ -98,11 +130,53 @@ export default function AdminPage() {
     toast.success("تم حذف المقال");
   };
 
+  // Bookings
   const updateBookingStatus = async (id: string, status: string) => {
     await supabase.from("bookings").update({ status }).eq("id", id);
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
     toast.success("تم تحديث حالة الحجز");
   };
+
+  const deleteCancelledBookings = async () => {
+    const cancelledIds = bookings.filter((b) => b.status === "cancelled").map((b) => b.id);
+    if (cancelledIds.length === 0) return toast.info("مافيش حجوزات ملغية");
+    for (const id of cancelledIds) {
+      await supabase.from("bookings").delete().eq("id", id);
+    }
+    setBookings((prev) => prev.filter((b) => b.status !== "cancelled"));
+    toast.success(`تم حذف ${cancelledIds.length} حجز ملغي`);
+  };
+
+  const deleteBooking = async (id: string) => {
+    await supabase.from("bookings").delete().eq("id", id);
+    setBookings((prev) => prev.filter((b) => b.id !== id));
+    toast.success("تم حذف الحجز");
+  };
+
+  // Prescriptions
+  const addPrescription = async () => {
+    const medsArray = prescForm.medications.split("\n").filter(Boolean).map((m) => {
+      const parts = m.split("-").map((s) => s.trim());
+      return { name: parts[0] || m, dosage: parts[1] || "", instructions: parts[2] || "" };
+    });
+    const { error } = await supabase.from("prescriptions").insert({
+      booking_id: prescForm.booking_id,
+      doctor_id: prescForm.doctor_id,
+      patient_id: prescForm.patient_id,
+      diagnosis: prescForm.diagnosis,
+      medications: medsArray,
+      notes: prescForm.notes,
+    });
+    if (!error) {
+      toast.success("تم إضافة الروشتة");
+      setPrescDialogOpen(false);
+      setPrescForm({ booking_id: "", doctor_id: "", patient_id: "", diagnosis: "", medications: "", notes: "" });
+      const { data } = await supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date, profiles(full_name))").order("created_at", { ascending: false });
+      setPrescriptions(data || []);
+    } else toast.error("حدث خطأ: " + error.message);
+  };
+
+  const filteredBookings = bookingFilter === "all" ? bookings : bookings.filter((b) => b.status === bookingFilter);
 
   if (authLoading || loadingData) {
     return (
@@ -122,7 +196,7 @@ export default function AdminPage() {
     { label: "إجمالي الأطباء", value: doctors.length, icon: Stethoscope, color: "text-primary" },
     { label: "إجمالي الحجوزات", value: bookings.length, icon: Calendar, color: "text-medical-blue" },
     { label: "المقالات", value: articles.length, icon: FileText, color: "text-medical-purple" },
-    { label: "المستخدمين", value: profiles.length, icon: Users, color: "text-medical-green" },
+    { label: "الروشتات", value: prescriptions.length, icon: Pill, color: "text-medical-green" },
   ];
 
   const statusBadge = (status: string) => {
@@ -169,6 +243,7 @@ export default function AdminPage() {
               <TabsTrigger value="overview" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><TrendingUp className="w-4 h-4" />نظرة عامة</TabsTrigger>
               <TabsTrigger value="doctors" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Stethoscope className="w-4 h-4" />الأطباء</TabsTrigger>
               <TabsTrigger value="bookings" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Calendar className="w-4 h-4" />الحجوزات</TabsTrigger>
+              <TabsTrigger value="prescriptions" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Pill className="w-4 h-4" />الروشتات</TabsTrigger>
               <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" />المقالات</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" />المستخدمين</TabsTrigger>
             </TabsList>
@@ -216,19 +291,19 @@ export default function AdminPage() {
             <TabsContent value="doctors">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-foreground">إدارة الأطباء</h3>
-                <Dialog open={docDialogOpen} onOpenChange={setDocDialogOpen}>
+                <Dialog open={docDialogOpen} onOpenChange={(open) => { setDocDialogOpen(open); if (!open) setEditingDoc(null); }}>
                   <DialogTrigger asChild>
-                    <Button className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة طبيب</Button>
+                    <Button onClick={openAddDoctor} className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة طبيب</Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
-                    <DialogHeader><DialogTitle className="font-display">إضافة طبيب جديد</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle className="font-display">{editingDoc ? "تعديل بيانات الطبيب" : "إضافة طبيب جديد"}</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div><Label>الاسم</Label><Input value={docForm.name} onChange={(e) => setDocForm({ ...docForm, name: e.target.value })} /></div>
                       <div><Label>التخصص</Label><Input value={docForm.specialty} onChange={(e) => setDocForm({ ...docForm, specialty: e.target.value })} /></div>
                       <div><Label>الموقع</Label><Input value={docForm.location} onChange={(e) => setDocForm({ ...docForm, location: e.target.value })} /></div>
                       <div><Label>السعر (جنيه)</Label><Input type="number" value={docForm.price} onChange={(e) => setDocForm({ ...docForm, price: Number(e.target.value) })} /></div>
                       <div><Label>نبذة</Label><Textarea value={docForm.bio} onChange={(e) => setDocForm({ ...docForm, bio: e.target.value })} /></div>
-                      <Button onClick={addDoctor} className="w-full gradient-hero-bg text-primary-foreground border-0">إضافة</Button>
+                      <Button onClick={saveDoctor} className="w-full gradient-hero-bg text-primary-foreground border-0">{editingDoc ? "حفظ التعديلات" : "إضافة"}</Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -247,7 +322,10 @@ export default function AdminPage() {
                         <TableCell>{doc.price} جنيه</TableCell>
                         <TableCell>{Number(doc.rating).toFixed(1)}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteDoctor(doc.id)}><Trash2 className="w-4 h-4" /></Button>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" className="text-primary" onClick={() => openEditDoctor(doc)}><Edit className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteDoctor(doc.id)}><Trash2 className="w-4 h-4" /></Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -258,14 +336,31 @@ export default function AdminPage() {
 
             {/* Bookings */}
             <TabsContent value="bookings">
-              <h3 className="font-display font-bold text-foreground mb-4">إدارة الحجوزات</h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h3 className="font-display font-bold text-foreground">إدارة الحجوزات</h3>
+                <div className="flex gap-2 flex-wrap">
+                  <Select value={bookingFilter} onValueChange={setBookingFilter}>
+                    <SelectTrigger className="w-32 h-9"><SelectValue placeholder="فلتر" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">الكل</SelectItem>
+                      <SelectItem value="pending">انتظار</SelectItem>
+                      <SelectItem value="confirmed">مؤكد</SelectItem>
+                      <SelectItem value="completed">مكتمل</SelectItem>
+                      <SelectItem value="cancelled">ملغي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="destructive" size="sm" className="gap-1.5" onClick={deleteCancelledBookings}>
+                    <Trash2 className="w-4 h-4" />حذف الملغية
+                  </Button>
+                </div>
+              </div>
               <div className="glass-card rounded-2xl overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow><TableHead className="text-right">المريض</TableHead><TableHead className="text-right">الطبيب</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">النوع</TableHead><TableHead className="text-right">الحالة</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bookings.map((b) => (
+                    {filteredBookings.map((b) => (
                       <TableRow key={b.id}>
                         <TableCell className="font-medium">{b.profiles?.full_name || "مستخدم"}</TableCell>
                         <TableCell>{b.doctors?.name}</TableCell>
@@ -273,18 +368,102 @@ export default function AdminPage() {
                         <TableCell>{b.type === "online" ? "أونلاين" : "عيادة"}</TableCell>
                         <TableCell>{statusBadge(b.status)}</TableCell>
                         <TableCell>
-                          <Select value={b.status} onValueChange={(val) => updateBookingStatus(b.id, val)}>
-                            <SelectTrigger className="w-28 h-8"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">انتظار</SelectItem>
-                              <SelectItem value="confirmed">تأكيد</SelectItem>
-                              <SelectItem value="completed">مكتمل</SelectItem>
-                              <SelectItem value="cancelled">إلغاء</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-1 items-center">
+                            <Select value={b.status} onValueChange={(val) => updateBookingStatus(b.id, val)}>
+                              <SelectTrigger className="w-28 h-8"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">انتظار</SelectItem>
+                                <SelectItem value="confirmed">تأكيد</SelectItem>
+                                <SelectItem value="completed">مكتمل</SelectItem>
+                                <SelectItem value="cancelled">إلغاء</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteBooking(b.id)}><Trash2 className="w-4 h-4" /></Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
+                    {filteredBookings.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">مافيش حجوزات</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* Prescriptions */}
+            <TabsContent value="prescriptions">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-display font-bold text-foreground">إدارة الروشتات</h3>
+                <Dialog open={prescDialogOpen} onOpenChange={setPrescDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة روشتة</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader><DialogTitle className="font-display">إضافة روشتة جديدة</DialogTitle></DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>الحجز</Label>
+                        <Select value={prescForm.booking_id} onValueChange={(val) => {
+                          const booking = bookings.find((b) => b.id === val);
+                          setPrescForm({
+                            ...prescForm,
+                            booking_id: val,
+                            doctor_id: booking?.doctor_id || "",
+                            patient_id: booking?.user_id || "",
+                          });
+                        }}>
+                          <SelectTrigger><SelectValue placeholder="اختر حجز" /></SelectTrigger>
+                          <SelectContent>
+                            {bookings.filter((b) => b.status === "confirmed" || b.status === "completed").map((b) => (
+                              <SelectItem key={b.id} value={b.id}>
+                                {b.profiles?.full_name || "مستخدم"} - {b.doctors?.name} ({b.booking_date})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div><Label>التشخيص</Label><Input value={prescForm.diagnosis} onChange={(e) => setPrescForm({ ...prescForm, diagnosis: e.target.value })} /></div>
+                      <div>
+                        <Label>الأدوية (دواء - جرعة - تعليمات) سطر لكل دواء</Label>
+                        <Textarea rows={4} placeholder="باراسيتامول - 500مجم - كل 8 ساعات&#10;أموكسيسيلين - 1جم - كل 12 ساعة" value={prescForm.medications} onChange={(e) => setPrescForm({ ...prescForm, medications: e.target.value })} />
+                      </div>
+                      <div><Label>ملاحظات</Label><Textarea value={prescForm.notes} onChange={(e) => setPrescForm({ ...prescForm, notes: e.target.value })} /></div>
+                      <Button onClick={addPrescription} className="w-full gradient-hero-bg text-primary-foreground border-0">إضافة الروشتة</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+              <div className="glass-card rounded-2xl overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">المريض</TableHead>
+                      <TableHead className="text-right">الطبيب</TableHead>
+                      <TableHead className="text-right">التشخيص</TableHead>
+                      <TableHead className="text-right">الأدوية</TableHead>
+                      <TableHead className="text-right">التاريخ</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {prescriptions.map((pr) => (
+                      <TableRow key={pr.id}>
+                        <TableCell className="font-medium">{pr.bookings?.profiles?.full_name || "مستخدم"}</TableCell>
+                        <TableCell>{pr.doctors?.name}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{pr.diagnosis}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {(Array.isArray(pr.medications) ? pr.medications : []).map((m: any, i: number) => (
+                              <Badge key={i} variant="outline" className="text-xs mr-1">{m.name} {m.dosage && `- ${m.dosage}`}</Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>{new Date(pr.created_at).toLocaleDateString("ar-EG")}</TableCell>
+                      </TableRow>
+                    ))}
+                    {prescriptions.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">مافيش روشتات</TableCell></TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
