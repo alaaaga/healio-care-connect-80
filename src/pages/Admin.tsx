@@ -427,7 +427,7 @@ export default function AdminPage() {
                           <SelectContent>
                             {bookings.filter((b) => b.status === "confirmed" || b.status === "completed").map((b) => (
                               <SelectItem key={b.id} value={b.id}>
-                                {b.profiles?.full_name || "مستخدم"} - {b.doctors?.name} ({b.booking_date})
+                                {b.patient_name} - {b.doctors?.name} ({b.booking_date})
                               </SelectItem>
                             ))}
                           </SelectContent>
