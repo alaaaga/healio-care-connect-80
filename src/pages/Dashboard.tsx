@@ -356,6 +356,54 @@ export default function DashboardPage() {
                 )}
               </TabsContent>
 
+              <TabsContent value="prescriptions">
+                {prescriptions.length === 0 ? (
+                  <div className="text-center py-16">
+                    <Pill className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-display font-bold text-foreground mb-2">مافيش روشتات</h3>
+                    <p className="text-muted-foreground">الروشتات هتظهر هنا بعد زيارة الطبيب</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {prescriptions.map((pr, i) => (
+                      <motion.div key={pr.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="glass-card rounded-xl p-5">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-xl bg-medical-green/10 flex items-center justify-center">
+                            <Pill className="w-5 h-5 text-medical-green" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-foreground">{pr.doctors?.name}</h4>
+                            <p className="text-xs text-muted-foreground">{new Date(pr.created_at).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
+                          </div>
+                        </div>
+                        {pr.diagnosis && (
+                          <div className="mb-3 p-3 bg-muted/50 rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-1">التشخيص</p>
+                            <p className="text-sm font-medium text-foreground">{pr.diagnosis}</p>
+                          </div>
+                        )}
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">الأدوية</p>
+                          {(Array.isArray(pr.medications) ? pr.medications : []).map((m: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 p-2 bg-primary/5 rounded-lg">
+                              <Badge variant="outline" className="text-xs shrink-0">{m.name}</Badge>
+                              {m.dosage && <span className="text-xs text-muted-foreground">{m.dosage}</span>}
+                              {m.instructions && <span className="text-xs text-foreground">• {m.instructions}</span>}
+                            </div>
+                          ))}
+                        </div>
+                        {pr.notes && (
+                          <div className="mt-3 p-3 bg-muted/30 rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-1">ملاحظات</p>
+                            <p className="text-sm text-foreground">{pr.notes}</p>
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
               <TabsContent value="profile">
                 <div className="glass-card rounded-2xl p-6 max-w-lg">
                   <div className="flex items-center gap-4 mb-6">
