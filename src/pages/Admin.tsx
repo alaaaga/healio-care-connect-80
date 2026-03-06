@@ -267,7 +267,7 @@ export default function AdminPage() {
                     {bookings.slice(0, 5).map((b) => (
                       <div key={b.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                         <div>
-                          <p className="text-sm font-medium text-foreground">{b.profiles?.full_name || "مستخدم"}</p>
+                          <p className="text-sm font-medium text-foreground">{b.patient_name}</p>
                           <p className="text-xs text-muted-foreground">{b.doctors?.name} • {b.booking_date}</p>
                         </div>
                         {statusBadge(b.status)}
