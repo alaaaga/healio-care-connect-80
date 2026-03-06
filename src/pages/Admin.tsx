@@ -58,16 +58,26 @@ export default function AdminPage() {
     const fetchAll = async () => {
       const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }] = await Promise.all([
         supabase.from("doctors").select("*").order("created_at", { ascending: false }),
-        supabase.from("bookings").select("*, doctors(name, specialty), profiles(full_name)").order("created_at", { ascending: false }),
+        supabase.from("bookings").select("*, doctors(name, specialty)").order("created_at", { ascending: false }),
         supabase.from("articles").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-        supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date, profiles(full_name))").order("created_at", { ascending: false }),
+        supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date)").order("created_at", { ascending: false }),
       ]);
+      // Map patient names from profiles
+      const profileMap = new Map((p || []).map((prof: any) => [prof.user_id, prof.full_name]));
+      const bookingsWithNames = (b || []).map((booking: any) => ({
+        ...booking,
+        patient_name: profileMap.get(booking.user_id) || "مستخدم",
+      }));
+      const prescsWithNames = (pr || []).map((presc: any) => ({
+        ...presc,
+        patient_name: profileMap.get(presc.patient_id) || "مستخدم",
+      }));
       setDoctors(d || []);
-      setBookings(b || []);
+      setBookings(bookingsWithNames);
       setArticles(a || []);
       setProfiles(p || []);
-      setPrescriptions(pr || []);
+      setPrescriptions(prescsWithNames);
       setLoadingData(false);
     };
     fetchAll();
