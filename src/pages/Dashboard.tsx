@@ -40,7 +40,7 @@ export default function DashboardPage() {
     if (!user) return;
 
     const fetchData = async () => {
-      const [{ data: bookingsData }, { data: notifsData }] = await Promise.all([
+      const [{ data: bookingsData }, { data: notifsData }, { data: prescData }] = await Promise.all([
         supabase
           .from("bookings")
           .select("*, doctors(name, specialty)")
@@ -51,9 +51,15 @@ export default function DashboardPage() {
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
+        supabase
+          .from("prescriptions")
+          .select("*, doctors(name, specialty)")
+          .eq("patient_id", user.id)
+          .order("created_at", { ascending: false }),
       ]);
       setBookings(bookingsData || []);
       setNotifications(notifsData || []);
+      setPrescriptions(prescData || []);
       setLoadingData(false);
     };
     fetchData();
