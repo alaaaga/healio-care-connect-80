@@ -372,7 +372,7 @@ export default function AdminPage() {
                   <TableBody>
                     {filteredBookings.map((b) => (
                       <TableRow key={b.id}>
-                        <TableCell className="font-medium">{b.profiles?.full_name || "مستخدم"}</TableCell>
+                        <TableCell className="font-medium">{b.patient_name}</TableCell>
                         <TableCell>{b.doctors?.name}</TableCell>
                         <TableCell>{b.booking_date} {b.booking_time}</TableCell>
                         <TableCell>{b.type === "online" ? "أونلاين" : "عيادة"}</TableCell>
