@@ -458,7 +458,7 @@ export default function AdminPage() {
                   <TableBody>
                     {prescriptions.map((pr) => (
                       <TableRow key={pr.id}>
-                        <TableCell className="font-medium">{pr.bookings?.profiles?.full_name || "مستخدم"}</TableCell>
+                        <TableCell className="font-medium">{pr.patient_name}</TableCell>
                         <TableCell>{pr.doctors?.name}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{pr.diagnosis}</TableCell>
                         <TableCell>
