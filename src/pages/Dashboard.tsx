@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Calendar, Clock, User, LogOut, Bell, CheckCircle2, XCircle, AlertCircle, Timer, Users, Pill
+  Calendar, Clock, User, LogOut, Bell, CheckCircle2, XCircle, AlertCircle, Timer, Users, Pill, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,40 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   completed: { label: "مكتمل", color: "bg-medical-green/10 text-medical-green border-medical-green/20", icon: CheckCircle2 },
   cancelled: { label: "ملغي", color: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
 };
+
+function generatePrescriptionPDF(pr: any, userName: string) {
+  const meds = Array.isArray(pr.medications) ? pr.medications : [];
+  const medsRows = meds.map((m: any) =>
+    `<tr><td style="padding:8px;border:1px solid #ddd">${m.name || ''}</td><td style="padding:8px;border:1px solid #ddd">${m.dosage || ''}</td><td style="padding:8px;border:1px solid #ddd">${m.instructions || ''}</td></tr>`
+  ).join('');
+
+  const html = `
+    <html dir="rtl"><head><meta charset="utf-8"><title>روشتة طبية</title>
+    <style>body{font-family:'Segoe UI',Tahoma,sans-serif;padding:40px;color:#333}
+    h1{color:#16a34a;border-bottom:3px solid #16a34a;padding-bottom:10px}
+    table{width:100%;border-collapse:collapse;margin:20px 0}
+    th{background:#f0fdf4;padding:10px;border:1px solid #ddd;text-align:right}
+    .info{display:flex;gap:40px;margin:20px 0;flex-wrap:wrap}
+    .info-item{margin-bottom:10px}
+    .label{color:#666;font-size:14px}.value{font-weight:bold;font-size:16px}
+    .notes{background:#f9fafb;padding:15px;border-radius:8px;margin-top:20px}
+    .footer{margin-top:40px;text-align:center;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:15px}
+    </style></head><body>
+    <h1>🏥 روشتة طبية — ميديكير</h1>
+    <div class="info">
+      <div class="info-item"><span class="label">المريض: </span><span class="value">${userName}</span></div>
+      <div class="info-item"><span class="label">الطبيب: </span><span class="value">${pr.doctors?.name || ''}</span></div>
+      <div class="info-item"><span class="label">التاريخ: </span><span class="value">${new Date(pr.created_at).toLocaleDateString("ar-EG")}</span></div>
+    </div>
+    ${pr.diagnosis ? `<div style="margin:15px 0"><strong>التشخيص:</strong> ${pr.diagnosis}</div>` : ''}
+    <table><thead><tr><th>الدواء</th><th>الجرعة</th><th>التعليمات</th></tr></thead><tbody>${medsRows || '<tr><td colspan="3" style="padding:8px;text-align:center">لا توجد أدوية</td></tr>'}</tbody></table>
+    ${pr.notes ? `<div class="notes"><strong>ملاحظات:</strong> ${pr.notes}</div>` : ''}
+    <div class="footer">هذه الروشتة صادرة من نظام ميديكير الإلكتروني</div>
+    </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -41,21 +75,9 @@ export default function DashboardPage() {
 
     const fetchData = async () => {
       const [{ data: bookingsData }, { data: notifsData }, { data: prescData }] = await Promise.all([
-        supabase
-          .from("bookings")
-          .select("*, doctors(name, specialty)")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("notifications")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("prescriptions")
-          .select("*, doctors(name, specialty)")
-          .eq("patient_id", user.id)
-          .order("created_at", { ascending: false }),
+        supabase.from("bookings").select("*, doctors(name, specialty)").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("prescriptions").select("*, doctors(name, specialty)").eq("patient_id", user.id).order("created_at", { ascending: false }),
       ]);
       setBookings(bookingsData || []);
       setNotifications(notifsData || []);
@@ -64,31 +86,18 @@ export default function DashboardPage() {
     };
     fetchData();
 
-    // Realtime: listen for new notifications
     const notifChannel = supabase
       .channel('user-notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`,
-      }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
         setNotifications((prev) => [payload.new as any, ...prev]);
         toast.info((payload.new as any).message);
       })
       .subscribe();
 
-    // Realtime: listen for booking updates
     const bookingChannel = supabase
       .channel('user-bookings')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'bookings',
-        filter: `user_id=eq.${user.id}`,
-      }, async (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookings', filter: `user_id=eq.${user.id}` }, async (payload) => {
         const updated = payload.new as any;
-        // Fetch doctor info for the updated booking
         const { data: docData } = await supabase.from("doctors").select("name, specialty").eq("id", updated.doctor_id).single();
         setBookings((prev) => prev.map((b) => b.id === updated.id ? { ...updated, doctors: docData } : b));
       })
@@ -101,10 +110,7 @@ export default function DashboardPage() {
   }, [user]);
 
   const cancelBooking = async (id: string) => {
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", id);
+    const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id);
     if (!error) {
       setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)));
       toast.success("تم إلغاء الحجز");
@@ -146,13 +152,11 @@ export default function DashboardPage() {
               <div className="flex gap-2">
                 <Link to="/booking">
                   <Button className="gradient-hero-bg text-primary-foreground border-0 shadow-lg shadow-primary/25 gap-2">
-                    <Calendar className="w-4 h-4" />
-                    حجز موعد جديد
+                    <Calendar className="w-4 h-4" />حجز موعد جديد
                   </Button>
                 </Link>
                 <Button variant="outline" onClick={signOut} className="gap-2 text-muted-foreground">
-                  <LogOut className="w-4 h-4" />
-                  خروج
+                  <LogOut className="w-4 h-4" />خروج
                 </Button>
               </div>
             </div>
@@ -375,6 +379,9 @@ export default function DashboardPage() {
                             <h4 className="font-semibold text-foreground">{pr.doctors?.name}</h4>
                             <p className="text-xs text-muted-foreground">{new Date(pr.created_at).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
                           </div>
+                          <Button variant="outline" size="sm" className="gap-1.5 text-medical-green" onClick={() => generatePrescriptionPDF(pr, profile?.full_name || user.email || '')}>
+                            <Download className="w-4 h-4" />تحميل PDF
+                          </Button>
                         </div>
                         {pr.diagnosis && (
                           <div className="mb-3 p-3 bg-muted/50 rounded-lg">
