@@ -184,6 +184,42 @@ export type Database = {
         }
         Relationships: []
       }
+      offers: {
+        Row: {
+          badge: string
+          created_at: string
+          description: string
+          discount: string
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          badge?: string
+          created_at?: string
+          description?: string
+          discount?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          badge?: string
+          created_at?: string
+          description?: string
+          discount?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       prescriptions: {
         Row: {
           booking_id: string
