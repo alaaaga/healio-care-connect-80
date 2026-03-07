@@ -3,33 +3,15 @@ import { Clock, Tag, Zap, Flame } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const offers = [
-  {
-    title: "خصم ٥٠٪ على كشف الأسنان",
-    desc: "فحص أسنان شامل مع تنظيف بنص السعر. العرض لفترة محدودة!",
-    badge: "مميز",
-    badgeIcon: Flame,
-    discount: "٥٠٪",
-    endsIn: new Date("2026-03-15"),
-  },
-  {
-    title: "استشارة قلب مجانية",
-    desc: "أول فحص قلب مع أفضل أطباء القلب عندنا — مجاناً تماماً.",
-    badge: "جديد",
-    badgeIcon: Zap,
-    discount: "مجاناً",
-    endsIn: new Date("2026-03-20"),
-  },
-  {
-    title: "باقة فحص العيون — خصم ٣٠٪",
-    desc: "فحص شامل للعين يشمل قياس الضغط واستشارة تصحيح النظر.",
-    badge: "خصم",
-    badgeIcon: Tag,
-    discount: "٣٠٪",
-    endsIn: new Date("2026-03-10"),
-  },
-];
+const badgeIcons: Record<string, React.ElementType> = {
+  "مميز": Flame,
+  "جديد": Zap,
+  "خصم": Tag,
+  "عرض": Tag,
+};
 
 function Countdown({ target }: { target: Date }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0 });
@@ -66,6 +48,46 @@ function Countdown({ target }: { target: Date }) {
 }
 
 export default function OffersSection() {
+  const [offers, setOffers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("offers")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+      setOffers(data || []);
+      setLoading(false);
+    };
+    fetch();
+
+    const channel = supabase
+      .channel('offers-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'offers' }, () => {
+        fetch();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="section-padding bg-muted/30">
+        <div className="container-narrow">
+          <Skeleton className="h-10 w-64 mx-auto mb-14" />
+          <div className="grid md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (offers.length === 0) return null;
+
   return (
     <section className="section-padding bg-muted/30">
       <div className="container-narrow">
@@ -82,39 +104,41 @@ export default function OffersSection() {
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {offers.map((offer, i) => (
-            <motion.div
-              key={offer.title}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.15 }}
-              whileHover={{ y: -8, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.1)" }}
-              className="glass-card rounded-2xl p-6 relative overflow-hidden"
-            >
-              {/* Shimmer effect */}
-              <div className="absolute inset-0 shimmer pointer-events-none" />
+          {offers.map((offer, i) => {
+            const BadgeIcon = badgeIcons[offer.badge] || Tag;
+            return (
+              <motion.div
+                key={offer.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                whileHover={{ y: -8, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.1)" }}
+                className="glass-card rounded-2xl p-6 relative overflow-hidden"
+              >
+                <div className="absolute inset-0 shimmer pointer-events-none" />
 
-              <div className="absolute top-4 left-4">
-                <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
-                  <Badge className="gradient-coral-bg text-accent-foreground border-0 gap-1">
-                    <offer.badgeIcon className="w-3 h-3" />
-                    {offer.badge}
-                  </Badge>
-                </motion.div>
-              </div>
+                <div className="absolute top-4 left-4">
+                  <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
+                    <Badge className="gradient-coral-bg text-accent-foreground border-0 gap-1">
+                      <BadgeIcon className="w-3 h-3" />
+                      {offer.badge}
+                    </Badge>
+                  </motion.div>
+                </div>
 
-              <div className="text-3xl font-display font-bold text-primary mb-3 mt-2">
-                {offer.discount}
-              </div>
-              <h3 className="font-display font-semibold text-foreground mb-2">{offer.title}</h3>
-              <p className="text-sm text-muted-foreground mb-4">{offer.desc}</p>
-              <Countdown target={offer.endsIn} />
-              <Button size="sm" className="w-full mt-4 gradient-hero-bg text-primary-foreground border-0">
-                احصل على العرض
-              </Button>
-            </motion.div>
-          ))}
+                <div className="text-3xl font-display font-bold text-primary mb-3 mt-2">
+                  {offer.discount}
+                </div>
+                <h3 className="font-display font-semibold text-foreground mb-2">{offer.title}</h3>
+                <p className="text-sm text-muted-foreground mb-4">{offer.description}</p>
+                {offer.ends_at && <Countdown target={new Date(offer.ends_at)} />}
+                <Button size="sm" className="w-full mt-4 gradient-hero-bg text-primary-foreground border-0">
+                  احصل على العرض
+                </Button>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Calendar, FileText, Stethoscope, TrendingUp, CheckCircle2, Clock, XCircle,
-  Plus, Trash2, Edit, Shield, Pill, Search
+  Plus, Trash2, Edit, Shield, Pill, Search, Upload, Image, Tag, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,50 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+function getPublicUrl(path: string) {
+  return `${SUPABASE_URL}/storage/v1/object/public/uploads/${path}`;
+}
+
+function generatePrescriptionPDF(pr: any) {
+  const meds = Array.isArray(pr.medications) ? pr.medications : [];
+  const medsRows = meds.map((m: any) =>
+    `<tr><td style="padding:8px;border:1px solid #ddd">${m.name || ''}</td><td style="padding:8px;border:1px solid #ddd">${m.dosage || ''}</td><td style="padding:8px;border:1px solid #ddd">${m.instructions || ''}</td></tr>`
+  ).join('');
+
+  const html = `
+    <html dir="rtl"><head><meta charset="utf-8"><title>روشتة طبية</title>
+    <style>body{font-family:'Segoe UI',Tahoma,sans-serif;padding:40px;color:#333}
+    h1{color:#16a34a;border-bottom:3px solid #16a34a;padding-bottom:10px}
+    table{width:100%;border-collapse:collapse;margin:20px 0}
+    th{background:#f0fdf4;padding:10px;border:1px solid #ddd;text-align:right}
+    .info{display:flex;gap:40px;margin:20px 0;flex-wrap:wrap}
+    .info-item{margin-bottom:10px}
+    .label{color:#666;font-size:14px}.value{font-weight:bold;font-size:16px}
+    .notes{background:#f9fafb;padding:15px;border-radius:8px;margin-top:20px}
+    .footer{margin-top:40px;text-align:center;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:15px}
+    </style></head><body>
+    <h1>🏥 روشتة طبية — ميديكير</h1>
+    <div class="info">
+      <div class="info-item"><span class="label">المريض: </span><span class="value">${pr.patient_name || ''}</span></div>
+      <div class="info-item"><span class="label">الطبيب: </span><span class="value">${pr.doctors?.name || ''}</span></div>
+      <div class="info-item"><span class="label">التاريخ: </span><span class="value">${new Date(pr.created_at).toLocaleDateString("ar-EG")}</span></div>
+    </div>
+    ${pr.diagnosis ? `<div style="margin:15px 0"><strong>التشخيص:</strong> ${pr.diagnosis}</div>` : ''}
+    <table><thead><tr><th>الدواء</th><th>الجرعة</th><th>التعليمات</th></tr></thead><tbody>${medsRows || '<tr><td colspan="3" style="padding:8px;text-align:center">لا توجد أدوية</td></tr>'}</tbody></table>
+    ${pr.notes ? `<div class="notes"><strong>ملاحظات:</strong> ${pr.notes}</div>` : ''}
+    <div class="footer">هذه الروشتة صادرة من نظام ميديكير الإلكتروني</div>
+    </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 500);
+  }
+}
+
 export default function AdminPage() {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -30,6 +74,7 @@ export default function AdminPage() {
   const [articles, setArticles] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [offers, setOffers] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [bookingFilter, setBookingFilter] = useState("all");
 
@@ -37,14 +82,25 @@ export default function AdminPage() {
   const [docForm, setDocForm] = useState({ name: "", specialty: "", location: "", price: 0, bio: "" });
   const [docDialogOpen, setDocDialogOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<any>(null);
+  const [docImageFile, setDocImageFile] = useState<File | null>(null);
+  const docImageRef = useRef<HTMLInputElement>(null);
 
   // Article form
   const [artForm, setArtForm] = useState({ title: "", content: "", excerpt: "", category: "عام", author: "فريق ميديكير" });
   const [artDialogOpen, setArtDialogOpen] = useState(false);
+  const [editingArt, setEditingArt] = useState<any>(null);
+  const [artImageFile, setArtImageFile] = useState<File | null>(null);
+  const artImageRef = useRef<HTMLInputElement>(null);
 
   // Prescription form
   const [prescForm, setPrescForm] = useState({ booking_id: "", doctor_id: "", patient_id: "", diagnosis: "", medications: "", notes: "" });
   const [prescDialogOpen, setPrescDialogOpen] = useState(false);
+  const [editingPresc, setEditingPresc] = useState<any>(null);
+
+  // Offer form
+  const [offerForm, setOfferForm] = useState({ title: "", description: "", discount: "", badge: "عرض", ends_at: "" });
+  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<any>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -56,14 +112,14 @@ export default function AdminPage() {
   useEffect(() => {
     if (!user || !isAdmin) return;
     const fetchAll = async () => {
-      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }] = await Promise.all([
+      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }, { data: o }] = await Promise.all([
         supabase.from("doctors").select("*").order("created_at", { ascending: false }),
         supabase.from("bookings").select("*, doctors(name, specialty)").order("created_at", { ascending: false }),
         supabase.from("articles").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
         supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date)").order("created_at", { ascending: false }),
+        supabase.from("offers").select("*").order("created_at", { ascending: false }),
       ]);
-      // Map patient names from profiles
       const profileMap = new Map((p || []).map((prof: any) => [prof.user_id, prof.full_name]));
       const bookingsWithNames = (b || []).map((booking: any) => ({
         ...booking,
@@ -78,33 +134,50 @@ export default function AdminPage() {
       setArticles(a || []);
       setProfiles(p || []);
       setPrescriptions(prescsWithNames);
+      setOffers(o || []);
       setLoadingData(false);
     };
     fetchAll();
   }, [user, isAdmin]);
 
+  // Upload image helper
+  const uploadImage = async (file: File, folder: string): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const path = `${folder}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("uploads").upload(path, file);
+    if (error) { toast.error("خطأ في رفع الصورة"); return null; }
+    return getPublicUrl(path);
+  };
+
   // Doctor CRUD
   const openEditDoctor = (doc: any) => {
     setEditingDoc(doc);
     setDocForm({ name: doc.name, specialty: doc.specialty, location: doc.location, price: doc.price, bio: doc.bio || "" });
+    setDocImageFile(null);
     setDocDialogOpen(true);
   };
 
   const openAddDoctor = () => {
     setEditingDoc(null);
     setDocForm({ name: "", specialty: "", location: "", price: 0, bio: "" });
+    setDocImageFile(null);
     setDocDialogOpen(true);
   };
 
   const saveDoctor = async () => {
+    let image_url = editingDoc?.image_url || "";
+    if (docImageFile) {
+      const url = await uploadImage(docImageFile, "doctors");
+      if (url) image_url = url;
+    }
     if (editingDoc) {
-      const { error } = await supabase.from("doctors").update(docForm).eq("id", editingDoc.id);
+      const { error } = await supabase.from("doctors").update({ ...docForm, image_url }).eq("id", editingDoc.id);
       if (!error) {
         toast.success("تم تعديل بيانات الطبيب");
-        setDoctors((prev) => prev.map((d) => d.id === editingDoc.id ? { ...d, ...docForm } : d));
+        setDoctors((prev) => prev.map((d) => d.id === editingDoc.id ? { ...d, ...docForm, image_url } : d));
       } else toast.error("حدث خطأ");
     } else {
-      const { error } = await supabase.from("doctors").insert({ ...docForm, is_active: true, consultation_types: ["clinic", "online"] });
+      const { error } = await supabase.from("doctors").insert({ ...docForm, image_url, is_active: true, consultation_types: ["clinic", "online"] });
       if (!error) {
         toast.success("تم إضافة الطبيب");
         const { data } = await supabase.from("doctors").select("*").order("created_at", { ascending: false });
@@ -113,7 +186,7 @@ export default function AdminPage() {
     }
     setDocDialogOpen(false);
     setEditingDoc(null);
-    setDocForm({ name: "", specialty: "", location: "", price: 0, bio: "" });
+    setDocImageFile(null);
   };
 
   const deleteDoctor = async (id: string) => {
@@ -123,15 +196,43 @@ export default function AdminPage() {
   };
 
   // Article CRUD
-  const addArticle = async () => {
-    const { error } = await supabase.from("articles").insert({ ...artForm, is_published: true });
-    if (!error) {
-      toast.success("تم إضافة المقال");
-      setArtDialogOpen(false);
-      setArtForm({ title: "", content: "", excerpt: "", category: "عام", author: "فريق ميديكير" });
-      const { data } = await supabase.from("articles").select("*").order("created_at", { ascending: false });
-      setArticles(data || []);
-    } else toast.error("حدث خطأ");
+  const openEditArticle = (art: any) => {
+    setEditingArt(art);
+    setArtForm({ title: art.title, content: art.content, excerpt: art.excerpt || "", category: art.category, author: art.author });
+    setArtImageFile(null);
+    setArtDialogOpen(true);
+  };
+
+  const openAddArticle = () => {
+    setEditingArt(null);
+    setArtForm({ title: "", content: "", excerpt: "", category: "عام", author: "فريق ميديكير" });
+    setArtImageFile(null);
+    setArtDialogOpen(true);
+  };
+
+  const saveArticle = async () => {
+    let image_url = editingArt?.image_url || "";
+    if (artImageFile) {
+      const url = await uploadImage(artImageFile, "articles");
+      if (url) image_url = url;
+    }
+    if (editingArt) {
+      const { error } = await supabase.from("articles").update({ ...artForm, image_url }).eq("id", editingArt.id);
+      if (!error) {
+        toast.success("تم تعديل المقال");
+        setArticles((prev) => prev.map((a) => a.id === editingArt.id ? { ...a, ...artForm, image_url } : a));
+      } else toast.error("حدث خطأ");
+    } else {
+      const { error } = await supabase.from("articles").insert({ ...artForm, image_url, is_published: true });
+      if (!error) {
+        toast.success("تم إضافة المقال");
+        const { data } = await supabase.from("articles").select("*").order("created_at", { ascending: false });
+        setArticles(data || []);
+      } else toast.error("حدث خطأ");
+    }
+    setArtDialogOpen(false);
+    setEditingArt(null);
+    setArtImageFile(null);
   };
 
   const deleteArticle = async (id: string) => {
@@ -164,26 +265,111 @@ export default function AdminPage() {
   };
 
   // Prescriptions
-  const addPrescription = async () => {
+  const openEditPrescription = (pr: any) => {
+    setEditingPresc(pr);
+    const medsText = (Array.isArray(pr.medications) ? pr.medications : [])
+      .map((m: any) => `${m.name}${m.dosage ? ' - ' + m.dosage : ''}${m.instructions ? ' - ' + m.instructions : ''}`)
+      .join('\n');
+    setPrescForm({
+      booking_id: pr.booking_id,
+      doctor_id: pr.doctor_id,
+      patient_id: pr.patient_id,
+      diagnosis: pr.diagnosis || "",
+      medications: medsText,
+      notes: pr.notes || "",
+    });
+    setPrescDialogOpen(true);
+  };
+
+  const openAddPrescription = () => {
+    setEditingPresc(null);
+    setPrescForm({ booking_id: "", doctor_id: "", patient_id: "", diagnosis: "", medications: "", notes: "" });
+    setPrescDialogOpen(true);
+  };
+
+  const savePrescription = async () => {
     const medsArray = prescForm.medications.split("\n").filter(Boolean).map((m) => {
       const parts = m.split("-").map((s) => s.trim());
       return { name: parts[0] || m, dosage: parts[1] || "", instructions: parts[2] || "" };
     });
-    const { error } = await supabase.from("prescriptions").insert({
+    const payload = {
       booking_id: prescForm.booking_id,
       doctor_id: prescForm.doctor_id,
       patient_id: prescForm.patient_id,
       diagnosis: prescForm.diagnosis,
       medications: medsArray,
       notes: prescForm.notes,
-    });
-    if (!error) {
-      toast.success("تم إضافة الروشتة");
-      setPrescDialogOpen(false);
-      setPrescForm({ booking_id: "", doctor_id: "", patient_id: "", diagnosis: "", medications: "", notes: "" });
-      const { data } = await supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date, profiles(full_name))").order("created_at", { ascending: false });
-      setPrescriptions(data || []);
-    } else toast.error("حدث خطأ: " + error.message);
+    };
+    if (editingPresc) {
+      const { error } = await supabase.from("prescriptions").update(payload).eq("id", editingPresc.id);
+      if (!error) {
+        toast.success("تم تعديل الروشتة");
+        const profileMap = new Map(profiles.map((p: any) => [p.user_id, p.full_name]));
+        setPrescriptions((prev) => prev.map((p) => p.id === editingPresc.id ? { ...p, ...payload, patient_name: profileMap.get(payload.patient_id) || "مستخدم" } : p));
+      } else toast.error("حدث خطأ: " + error.message);
+    } else {
+      const { error } = await supabase.from("prescriptions").insert(payload);
+      if (!error) {
+        toast.success("تم إضافة الروشتة");
+        const { data } = await supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date)").order("created_at", { ascending: false });
+        const profileMap = new Map(profiles.map((p: any) => [p.user_id, p.full_name]));
+        setPrescriptions((data || []).map((pr: any) => ({ ...pr, patient_name: profileMap.get(pr.patient_id) || "مستخدم" })));
+      } else toast.error("حدث خطأ: " + error.message);
+    }
+    setPrescDialogOpen(false);
+    setEditingPresc(null);
+  };
+
+  const deletePrescription = async (id: string) => {
+    await supabase.from("prescriptions").delete().eq("id", id);
+    setPrescriptions((prev) => prev.filter((p) => p.id !== id));
+    toast.success("تم حذف الروشتة");
+  };
+
+  // Offers CRUD
+  const openEditOffer = (o: any) => {
+    setEditingOffer(o);
+    setOfferForm({ title: o.title, description: o.description, discount: o.discount, badge: o.badge, ends_at: o.ends_at ? new Date(o.ends_at).toISOString().slice(0, 16) : "" });
+    setOfferDialogOpen(true);
+  };
+
+  const openAddOffer = () => {
+    setEditingOffer(null);
+    setOfferForm({ title: "", description: "", discount: "", badge: "عرض", ends_at: "" });
+    setOfferDialogOpen(true);
+  };
+
+  const saveOffer = async () => {
+    const payload = {
+      title: offerForm.title,
+      description: offerForm.description,
+      discount: offerForm.discount,
+      badge: offerForm.badge,
+      ends_at: offerForm.ends_at ? new Date(offerForm.ends_at).toISOString() : null,
+      is_active: true,
+    };
+    if (editingOffer) {
+      const { error } = await supabase.from("offers").update(payload).eq("id", editingOffer.id);
+      if (!error) {
+        toast.success("تم تعديل العرض");
+        setOffers((prev) => prev.map((o) => o.id === editingOffer.id ? { ...o, ...payload } : o));
+      } else toast.error("حدث خطأ");
+    } else {
+      const { error } = await supabase.from("offers").insert(payload);
+      if (!error) {
+        toast.success("تم إضافة العرض");
+        const { data } = await supabase.from("offers").select("*").order("created_at", { ascending: false });
+        setOffers(data || []);
+      } else toast.error("حدث خطأ");
+    }
+    setOfferDialogOpen(false);
+    setEditingOffer(null);
+  };
+
+  const deleteOffer = async (id: string) => {
+    await supabase.from("offers").delete().eq("id", id);
+    setOffers((prev) => prev.filter((o) => o.id !== id));
+    toast.success("تم حذف العرض");
   };
 
   const filteredBookings = bookingFilter === "all" ? bookings : bookings.filter((b) => b.status === bookingFilter);
@@ -220,6 +406,22 @@ export default function AdminPage() {
     return <Badge className={`${map[status] || ""} border-0`}>{labels[status] || status}</Badge>;
   };
 
+  // Image upload input component
+  const ImageUploadField = ({ fileRef, file, setFile, currentUrl, label }: any) => (
+    <div>
+      <Label>{label}</Label>
+      <div className="flex items-center gap-3 mt-1">
+        {(currentUrl || file) && (
+          <img src={file ? URL.createObjectURL(file) : currentUrl} alt="" className="w-12 h-12 rounded-lg object-cover border border-border" />
+        )}
+        <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => fileRef.current?.click()}>
+          <Upload className="w-4 h-4" />{file ? "تغيير" : "رفع صورة"}
+        </Button>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -255,6 +457,7 @@ export default function AdminPage() {
               <TabsTrigger value="bookings" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Calendar className="w-4 h-4" />الحجوزات</TabsTrigger>
               <TabsTrigger value="prescriptions" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Pill className="w-4 h-4" />الروشتات</TabsTrigger>
               <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" />المقالات</TabsTrigger>
+              <TabsTrigger value="offers" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Tag className="w-4 h-4" />العروض</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" />المستخدمين</TabsTrigger>
             </TabsList>
 
@@ -301,13 +504,14 @@ export default function AdminPage() {
             <TabsContent value="doctors">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-foreground">إدارة الأطباء</h3>
-                <Dialog open={docDialogOpen} onOpenChange={(open) => { setDocDialogOpen(open); if (!open) setEditingDoc(null); }}>
+                <Dialog open={docDialogOpen} onOpenChange={(open) => { setDocDialogOpen(open); if (!open) { setEditingDoc(null); setDocImageFile(null); } }}>
                   <DialogTrigger asChild>
                     <Button onClick={openAddDoctor} className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة طبيب</Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
                     <DialogHeader><DialogTitle className="font-display">{editingDoc ? "تعديل بيانات الطبيب" : "إضافة طبيب جديد"}</DialogTitle></DialogHeader>
                     <div className="space-y-4">
+                      <ImageUploadField fileRef={docImageRef} file={docImageFile} setFile={setDocImageFile} currentUrl={editingDoc?.image_url} label="صورة الطبيب" />
                       <div><Label>الاسم</Label><Input value={docForm.name} onChange={(e) => setDocForm({ ...docForm, name: e.target.value })} /></div>
                       <div><Label>التخصص</Label><Input value={docForm.specialty} onChange={(e) => setDocForm({ ...docForm, specialty: e.target.value })} /></div>
                       <div><Label>الموقع</Label><Input value={docForm.location} onChange={(e) => setDocForm({ ...docForm, location: e.target.value })} /></div>
@@ -321,16 +525,18 @@ export default function AdminPage() {
               <div className="glass-card rounded-2xl overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow><TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">التخصص</TableHead><TableHead className="text-right">الموقع</TableHead><TableHead className="text-right">السعر</TableHead><TableHead className="text-right">التقييم</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
+                    <TableRow><TableHead className="text-right">الصورة</TableHead><TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">التخصص</TableHead><TableHead className="text-right">الموقع</TableHead><TableHead className="text-right">السعر</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
                     {doctors.map((doc) => (
                       <TableRow key={doc.id}>
+                        <TableCell>
+                          {doc.image_url ? <img src={doc.image_url} alt={doc.name} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center"><Image className="w-4 h-4 text-muted-foreground" /></div>}
+                        </TableCell>
                         <TableCell className="font-medium">{doc.name}</TableCell>
                         <TableCell>{doc.specialty}</TableCell>
                         <TableCell>{doc.location}</TableCell>
                         <TableCell>{doc.price} جنيه</TableCell>
-                        <TableCell>{Number(doc.rating).toFixed(1)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" className="text-primary" onClick={() => openEditDoctor(doc)}><Edit className="w-4 h-4" /></Button>
@@ -405,41 +611,43 @@ export default function AdminPage() {
             <TabsContent value="prescriptions">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-foreground">إدارة الروشتات</h3>
-                <Dialog open={prescDialogOpen} onOpenChange={setPrescDialogOpen}>
+                <Dialog open={prescDialogOpen} onOpenChange={(open) => { setPrescDialogOpen(open); if (!open) setEditingPresc(null); }}>
                   <DialogTrigger asChild>
-                    <Button className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة روشتة</Button>
+                    <Button onClick={openAddPrescription} className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة روشتة</Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-lg">
-                    <DialogHeader><DialogTitle className="font-display">إضافة روشتة جديدة</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle className="font-display">{editingPresc ? "تعديل الروشتة" : "إضافة روشتة جديدة"}</DialogTitle></DialogHeader>
                     <div className="space-y-4">
-                      <div>
-                        <Label>الحجز</Label>
-                        <Select value={prescForm.booking_id} onValueChange={(val) => {
-                          const booking = bookings.find((b) => b.id === val);
-                          setPrescForm({
-                            ...prescForm,
-                            booking_id: val,
-                            doctor_id: booking?.doctor_id || "",
-                            patient_id: booking?.user_id || "",
-                          });
-                        }}>
-                          <SelectTrigger><SelectValue placeholder="اختر حجز" /></SelectTrigger>
-                          <SelectContent>
-                            {bookings.filter((b) => b.status === "confirmed" || b.status === "completed").map((b) => (
-                              <SelectItem key={b.id} value={b.id}>
-                                {b.patient_name} - {b.doctors?.name} ({b.booking_date})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {!editingPresc && (
+                        <div>
+                          <Label>الحجز</Label>
+                          <Select value={prescForm.booking_id} onValueChange={(val) => {
+                            const booking = bookings.find((b) => b.id === val);
+                            setPrescForm({
+                              ...prescForm,
+                              booking_id: val,
+                              doctor_id: booking?.doctor_id || "",
+                              patient_id: booking?.user_id || "",
+                            });
+                          }}>
+                            <SelectTrigger><SelectValue placeholder="اختر حجز" /></SelectTrigger>
+                            <SelectContent>
+                              {bookings.filter((b) => b.status === "confirmed" || b.status === "completed").map((b) => (
+                                <SelectItem key={b.id} value={b.id}>
+                                  {b.patient_name} - {b.doctors?.name} ({b.booking_date})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       <div><Label>التشخيص</Label><Input value={prescForm.diagnosis} onChange={(e) => setPrescForm({ ...prescForm, diagnosis: e.target.value })} /></div>
                       <div>
                         <Label>الأدوية (دواء - جرعة - تعليمات) سطر لكل دواء</Label>
                         <Textarea rows={4} placeholder="باراسيتامول - 500مجم - كل 8 ساعات&#10;أموكسيسيلين - 1جم - كل 12 ساعة" value={prescForm.medications} onChange={(e) => setPrescForm({ ...prescForm, medications: e.target.value })} />
                       </div>
                       <div><Label>ملاحظات</Label><Textarea value={prescForm.notes} onChange={(e) => setPrescForm({ ...prescForm, notes: e.target.value })} /></div>
-                      <Button onClick={addPrescription} className="w-full gradient-hero-bg text-primary-foreground border-0">إضافة الروشتة</Button>
+                      <Button onClick={savePrescription} className="w-full gradient-hero-bg text-primary-foreground border-0">{editingPresc ? "حفظ التعديلات" : "إضافة الروشتة"}</Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -453,6 +661,7 @@ export default function AdminPage() {
                       <TableHead className="text-right">التشخيص</TableHead>
                       <TableHead className="text-right">الأدوية</TableHead>
                       <TableHead className="text-right">التاريخ</TableHead>
+                      <TableHead className="text-right">إجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -469,10 +678,17 @@ export default function AdminPage() {
                           </div>
                         </TableCell>
                         <TableCell>{new Date(pr.created_at).toLocaleDateString("ar-EG")}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" className="text-primary" onClick={() => openEditPrescription(pr)}><Edit className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="sm" className="text-medical-green" onClick={() => generatePrescriptionPDF(pr)}><Download className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deletePrescription(pr.id)}><Trash2 className="w-4 h-4" /></Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                     {prescriptions.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">مافيش روشتات</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">مافيش روشتات</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -483,19 +699,20 @@ export default function AdminPage() {
             <TabsContent value="articles">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-foreground">إدارة المقالات</h3>
-                <Dialog open={artDialogOpen} onOpenChange={setArtDialogOpen}>
+                <Dialog open={artDialogOpen} onOpenChange={(open) => { setArtDialogOpen(open); if (!open) { setEditingArt(null); setArtImageFile(null); } }}>
                   <DialogTrigger asChild>
-                    <Button className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة مقال</Button>
+                    <Button onClick={openAddArticle} className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة مقال</Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
-                    <DialogHeader><DialogTitle className="font-display">إضافة مقال جديد</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle className="font-display">{editingArt ? "تعديل المقال" : "إضافة مقال جديد"}</DialogTitle></DialogHeader>
                     <div className="space-y-4">
+                      <ImageUploadField fileRef={artImageRef} file={artImageFile} setFile={setArtImageFile} currentUrl={editingArt?.image_url} label="صورة المقال" />
                       <div><Label>العنوان</Label><Input value={artForm.title} onChange={(e) => setArtForm({ ...artForm, title: e.target.value })} /></div>
                       <div><Label>الملخص</Label><Input value={artForm.excerpt} onChange={(e) => setArtForm({ ...artForm, excerpt: e.target.value })} /></div>
                       <div><Label>التصنيف</Label><Input value={artForm.category} onChange={(e) => setArtForm({ ...artForm, category: e.target.value })} /></div>
                       <div><Label>الكاتب</Label><Input value={artForm.author} onChange={(e) => setArtForm({ ...artForm, author: e.target.value })} /></div>
                       <div><Label>المحتوى</Label><Textarea rows={5} value={artForm.content} onChange={(e) => setArtForm({ ...artForm, content: e.target.value })} /></div>
-                      <Button onClick={addArticle} className="w-full gradient-hero-bg text-primary-foreground border-0">إضافة</Button>
+                      <Button onClick={saveArticle} className="w-full gradient-hero-bg text-primary-foreground border-0">{editingArt ? "حفظ التعديلات" : "إضافة"}</Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -503,20 +720,85 @@ export default function AdminPage() {
               <div className="glass-card rounded-2xl overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">التصنيف</TableHead><TableHead className="text-right">الكاتب</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
+                    <TableRow><TableHead className="text-right">الصورة</TableHead><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">التصنيف</TableHead><TableHead className="text-right">الكاتب</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
                     {articles.map((a) => (
                       <TableRow key={a.id}>
+                        <TableCell>
+                          {a.image_url ? <img src={a.image_url} alt={a.title} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center"><Image className="w-4 h-4 text-muted-foreground" /></div>}
+                        </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">{a.title}</TableCell>
                         <TableCell><Badge variant="outline">{a.category}</Badge></TableCell>
                         <TableCell>{a.author}</TableCell>
                         <TableCell>{new Date(a.created_at).toLocaleDateString("ar-EG")}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteArticle(a.id)}><Trash2 className="w-4 h-4" /></Button>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" className="text-primary" onClick={() => openEditArticle(a)}><Edit className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteArticle(a.id)}><Trash2 className="w-4 h-4" /></Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* Offers */}
+            <TabsContent value="offers">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-display font-bold text-foreground">إدارة العروض والخصومات</h3>
+                <Dialog open={offerDialogOpen} onOpenChange={(open) => { setOfferDialogOpen(open); if (!open) setEditingOffer(null); }}>
+                  <DialogTrigger asChild>
+                    <Button onClick={openAddOffer} className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة عرض</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader><DialogTitle className="font-display">{editingOffer ? "تعديل العرض" : "إضافة عرض جديد"}</DialogTitle></DialogHeader>
+                    <div className="space-y-4">
+                      <div><Label>عنوان العرض</Label><Input value={offerForm.title} onChange={(e) => setOfferForm({ ...offerForm, title: e.target.value })} /></div>
+                      <div><Label>الوصف</Label><Textarea value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} /></div>
+                      <div><Label>الخصم (مثال: ٥٠٪ أو مجاناً)</Label><Input value={offerForm.discount} onChange={(e) => setOfferForm({ ...offerForm, discount: e.target.value })} /></div>
+                      <div><Label>الشارة</Label>
+                        <Select value={offerForm.badge} onValueChange={(val) => setOfferForm({ ...offerForm, badge: val })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="مميز">مميز</SelectItem>
+                            <SelectItem value="جديد">جديد</SelectItem>
+                            <SelectItem value="خصم">خصم</SelectItem>
+                            <SelectItem value="عرض">عرض</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div><Label>ينتهي في</Label><Input type="datetime-local" value={offerForm.ends_at} onChange={(e) => setOfferForm({ ...offerForm, ends_at: e.target.value })} /></div>
+                      <Button onClick={saveOffer} className="w-full gradient-hero-bg text-primary-foreground border-0">{editingOffer ? "حفظ التعديلات" : "إضافة العرض"}</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+              <div className="glass-card rounded-2xl overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">الخصم</TableHead><TableHead className="text-right">الشارة</TableHead><TableHead className="text-right">ينتهي في</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {offers.map((o) => (
+                      <TableRow key={o.id}>
+                        <TableCell className="font-medium">{o.title}</TableCell>
+                        <TableCell><Badge className="bg-primary/10 text-primary border-0">{o.discount}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{o.badge}</Badge></TableCell>
+                        <TableCell>{o.ends_at ? new Date(o.ends_at).toLocaleDateString("ar-EG") : "—"}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" className="text-primary" onClick={() => openEditOffer(o)}><Edit className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteOffer(o.id)}><Trash2 className="w-4 h-4" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {offers.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">مافيش عروض</TableCell></TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
