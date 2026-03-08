@@ -790,7 +790,8 @@ export default function AdminPage() {
                     <div className="space-y-4">
                       <div><Label>عنوان العرض</Label><Input value={offerForm.title} onChange={(e) => setOfferForm({ ...offerForm, title: e.target.value })} /></div>
                       <div><Label>الوصف</Label><Textarea value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} /></div>
-                      <div><Label>الخصم (مثال: ٥٠٪ أو مجاناً)</Label><Input value={offerForm.discount} onChange={(e) => setOfferForm({ ...offerForm, discount: e.target.value })} /></div>
+                      <div><Label>الخصم (نص عرض مثل: ٥٠٪ أو مجاناً)</Label><Input value={offerForm.discount} onChange={(e) => setOfferForm({ ...offerForm, discount: e.target.value })} /></div>
+                      <div><Label>نسبة الخصم الفعلية (%)</Label><Input type="number" min={0} max={100} value={offerForm.discount_percentage} onChange={(e) => setOfferForm({ ...offerForm, discount_percentage: Number(e.target.value) })} placeholder="مثال: 20" /></div>
                       <div><Label>الشارة</Label>
                         <Select value={offerForm.badge} onValueChange={(val) => setOfferForm({ ...offerForm, badge: val })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
