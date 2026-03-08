@@ -581,7 +581,7 @@ export default function AdminPage() {
               <div className="glass-card rounded-2xl overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow><TableHead className="text-right">المريض</TableHead><TableHead className="text-right">الطبيب</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">النوع</TableHead><TableHead className="text-right">الحالة</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
+                    <TableRow><TableHead className="text-right">المريض</TableHead><TableHead className="text-right">الطبيب</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">النوع</TableHead><TableHead className="text-right">الحالة</TableHead><TableHead className="text-right">الطابور</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredBookings.map((b) => (
@@ -591,6 +591,29 @@ export default function AdminPage() {
                         <TableCell>{b.booking_date} {b.booking_time}</TableCell>
                         <TableCell>{b.type === "online" ? "أونلاين" : "عيادة"}</TableCell>
                         <TableCell>{statusBadge(b.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              placeholder="ترتيب"
+                              className="w-16 h-8 text-xs"
+                              defaultValue={b.queue_position || ""}
+                              onBlur={(e) => {
+                                const val = e.target.value ? parseInt(e.target.value) : null;
+                                if (val !== b.queue_position) updateBookingQueue(b.id, val, b.estimated_wait);
+                              }}
+                            />
+                            <Input
+                              placeholder="وقت"
+                              className="w-20 h-8 text-xs"
+                              defaultValue={b.estimated_wait || ""}
+                              onBlur={(e) => {
+                                const val = e.target.value || null;
+                                if (val !== b.estimated_wait) updateBookingQueue(b.id, b.queue_position, val);
+                              }}
+                            />
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex gap-1 items-center">
                             <Select value={b.status} onValueChange={(val) => updateBookingStatus(b.id, val)}>
@@ -608,7 +631,7 @@ export default function AdminPage() {
                       </TableRow>
                     ))}
                     {filteredBookings.length === 0 && (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">مافيش حجوزات</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">مافيش حجوزات</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
