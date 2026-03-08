@@ -342,7 +342,7 @@ export default function AdminPage() {
 
   const openAddOffer = () => {
     setEditingOffer(null);
-    setOfferForm({ title: "", description: "", discount: "", badge: "عرض", ends_at: "" });
+    setOfferForm({ title: "", description: "", discount: "", discount_percentage: 0, badge: "عرض", ends_at: "" });
     setOfferDialogOpen(true);
   };
 
