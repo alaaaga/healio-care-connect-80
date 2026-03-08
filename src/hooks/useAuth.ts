@@ -63,6 +63,8 @@ export function useAuth() {
         } else {
           setProfile(null);
           setIsAdmin(false);
+          setIsDoctor(false);
+          setDoctorProfile(null);
           setLoading(false);
         }
       }
