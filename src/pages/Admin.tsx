@@ -20,6 +20,7 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import AnalyticsTab from "@/components/admin/AnalyticsTab";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
