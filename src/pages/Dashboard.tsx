@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [reviews, setReviews] = useState<Record<string, { id: string; rating: number; comment: string }>>({});
 
   useEffect(() => {
     if (!authLoading && !user) {
