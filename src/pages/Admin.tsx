@@ -78,6 +78,11 @@ export default function AdminPage() {
   const [offers, setOffers] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [bookingFilter, setBookingFilter] = useState("all");
+  const [userRoles, setUserRoles] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [linkDoctorDialogOpen, setLinkDoctorDialogOpen] = useState(false);
+  const [linkingUserId, setLinkingUserId] = useState<string | null>(null);
+  const [selectedDoctorToLink, setSelectedDoctorToLink] = useState("");
 
   // Doctor form
   const [docForm, setDocForm] = useState({ name: "", specialty: "", location: "", price: 0, bio: "" });
