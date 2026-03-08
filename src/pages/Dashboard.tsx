@@ -179,43 +179,20 @@ export default function DashboardPage() {
             ))}
           </motion.div>
 
-          {/* Queue Tracker */}
-          {activeBookings.some((b) => b.queue_position) && (
-            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="mb-8 glass-card rounded-2xl p-6 border-2 border-primary/20">
+          {/* Booking Tracker */}
+          {activeBookings.length > 0 && (
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="mb-8">
               <div className="flex items-center gap-3 mb-4">
-                <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-primary" />
-                </motion.div>
-                <div>
-                  <h3 className="font-display font-bold text-foreground">متابعة الطابور</h3>
-                  <p className="text-xs text-muted-foreground">حالة موعدك الحالي في العيادة</p>
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Navigation className="w-4 h-4 text-primary" />
                 </div>
+                <h3 className="font-display font-bold text-foreground">تتبع حجوزاتك</h3>
               </div>
-              {activeBookings.filter((b) => b.queue_position).map((booking) => (
-                <div key={booking.id} className="bg-muted/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="flex-1">
-                    <p className="font-semibold text-foreground">{booking.doctors?.name} - {booking.doctors?.specialty}</p>
-                    <p className="text-sm text-muted-foreground">{booking.booking_date} | {booking.booking_time}</p>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <motion.p animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="font-display text-3xl font-bold text-primary">
-                        {booking.queue_position}
-                      </motion.p>
-                      <p className="text-xs text-muted-foreground">قدامك</p>
-                    </div>
-                    {booking.estimated_wait && (
-                      <div className="text-center flex items-center gap-1.5">
-                        <Timer className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <p className="font-semibold text-foreground text-sm">{booking.estimated_wait}</p>
-                          <p className="text-xs text-muted-foreground">وقت الانتظار</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+              <div className="space-y-3">
+                {activeBookings.map((booking) => (
+                  <BookingTracker key={booking.id} booking={booking} />
+                ))}
+              </div>
             </motion.div>
           )}
 
@@ -225,6 +202,9 @@ export default function DashboardPage() {
               <TabsList className="w-full justify-start bg-muted/50 p-1 rounded-xl mb-6">
                 <TabsTrigger value="bookings" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <Calendar className="w-4 h-4" />حجوزاتي
+                </TabsTrigger>
+                <TabsTrigger value="tracker" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Navigation className="w-4 h-4" />تتبع الحجز
                 </TabsTrigger>
                 <TabsTrigger value="notifications" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <Bell className="w-4 h-4" />الإشعارات
@@ -241,6 +221,27 @@ export default function DashboardPage() {
                   <User className="w-4 h-4" />بياناتي
                 </TabsTrigger>
               </TabsList>
+
+              {/* Tracker Tab */}
+              <TabsContent value="tracker">
+                {loadingData ? (
+                  <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-xl" />)}</div>
+                ) : bookings.length === 0 ? (
+                  <div className="text-center py-16">
+                    <Navigation className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-display font-bold text-foreground mb-2">مافيش حجوزات للتتبع</h3>
+                    <p className="text-muted-foreground mb-4">احجز موعد وتابع حالته من هنا</p>
+                    <Link to="/booking"><Button className="gradient-hero-bg text-primary-foreground border-0">احجز الآن</Button></Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <h3 className="font-display font-semibold text-foreground">جميع حجوزاتك</h3>
+                    {bookings.map((booking) => (
+                      <BookingTracker key={booking.id} booking={booking} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
 
               <TabsContent value="bookings">
                 {loadingData ? (
