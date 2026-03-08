@@ -65,6 +65,7 @@ export type Database = {
           estimated_wait: string | null
           id: string
           notes: string | null
+          offer_id: string | null
           queue_position: number | null
           status: string
           type: string
@@ -79,6 +80,7 @@ export type Database = {
           estimated_wait?: string | null
           id?: string
           notes?: string | null
+          offer_id?: string | null
           queue_position?: number | null
           status?: string
           type?: string
@@ -93,6 +95,7 @@ export type Database = {
           estimated_wait?: string | null
           id?: string
           notes?: string | null
+          offer_id?: string | null
           queue_position?: number | null
           status?: string
           type?: string
@@ -105,6 +108,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
             referencedColumns: ["id"]
           },
         ]
@@ -190,6 +200,7 @@ export type Database = {
           created_at: string
           description: string
           discount: string
+          discount_percentage: number | null
           ends_at: string | null
           id: string
           is_active: boolean
@@ -201,6 +212,7 @@ export type Database = {
           created_at?: string
           description?: string
           discount?: string
+          discount_percentage?: number | null
           ends_at?: string | null
           id?: string
           is_active?: boolean
@@ -212,6 +224,7 @@ export type Database = {
           created_at?: string
           description?: string
           discount?: string
+          discount_percentage?: number | null
           ends_at?: string | null
           id?: string
           is_active?: boolean

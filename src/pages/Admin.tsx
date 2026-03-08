@@ -99,7 +99,7 @@ export default function AdminPage() {
   const [editingPresc, setEditingPresc] = useState<any>(null);
 
   // Offer form
-  const [offerForm, setOfferForm] = useState({ title: "", description: "", discount: "", badge: "عرض", ends_at: "" });
+  const [offerForm, setOfferForm] = useState({ title: "", description: "", discount: "", discount_percentage: 0, badge: "عرض", ends_at: "" });
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<any>(null);
 
@@ -336,13 +336,13 @@ export default function AdminPage() {
   // Offers CRUD
   const openEditOffer = (o: any) => {
     setEditingOffer(o);
-    setOfferForm({ title: o.title, description: o.description, discount: o.discount, badge: o.badge, ends_at: o.ends_at ? new Date(o.ends_at).toISOString().slice(0, 16) : "" });
+    setOfferForm({ title: o.title, description: o.description, discount: o.discount, discount_percentage: o.discount_percentage || 0, badge: o.badge, ends_at: o.ends_at ? new Date(o.ends_at).toISOString().slice(0, 16) : "" });
     setOfferDialogOpen(true);
   };
 
   const openAddOffer = () => {
     setEditingOffer(null);
-    setOfferForm({ title: "", description: "", discount: "", badge: "عرض", ends_at: "" });
+    setOfferForm({ title: "", description: "", discount: "", discount_percentage: 0, badge: "عرض", ends_at: "" });
     setOfferDialogOpen(true);
   };
 
@@ -351,6 +351,7 @@ export default function AdminPage() {
       title: offerForm.title,
       description: offerForm.description,
       discount: offerForm.discount,
+      discount_percentage: offerForm.discount_percentage,
       badge: offerForm.badge,
       ends_at: offerForm.ends_at ? new Date(offerForm.ends_at).toISOString() : null,
       is_active: true,
@@ -789,7 +790,8 @@ export default function AdminPage() {
                     <div className="space-y-4">
                       <div><Label>عنوان العرض</Label><Input value={offerForm.title} onChange={(e) => setOfferForm({ ...offerForm, title: e.target.value })} /></div>
                       <div><Label>الوصف</Label><Textarea value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} /></div>
-                      <div><Label>الخصم (مثال: ٥٠٪ أو مجاناً)</Label><Input value={offerForm.discount} onChange={(e) => setOfferForm({ ...offerForm, discount: e.target.value })} /></div>
+                      <div><Label>الخصم (نص عرض مثل: ٥٠٪ أو مجاناً)</Label><Input value={offerForm.discount} onChange={(e) => setOfferForm({ ...offerForm, discount: e.target.value })} /></div>
+                      <div><Label>نسبة الخصم الفعلية (%)</Label><Input type="number" min={0} max={100} value={offerForm.discount_percentage} onChange={(e) => setOfferForm({ ...offerForm, discount_percentage: Number(e.target.value) })} placeholder="مثال: 20" /></div>
                       <div><Label>الشارة</Label>
                         <Select value={offerForm.badge} onValueChange={(val) => setOfferForm({ ...offerForm, badge: val })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
