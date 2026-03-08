@@ -291,13 +291,13 @@ export default function BookingPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">سعر الكشف</span>
-                      <span className={cn("text-foreground", appliedOffer?.discount_percentage && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
+                      <span className={cn("text-foreground", appliedDiscountPercentage > 0 && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
                     </div>
-                    {appliedOffer?.discount_percentage > 0 && (
+                    {appliedDiscountPercentage > 0 && (
                       <>
                         <div className="flex justify-between text-primary">
                           <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" />خصم {appliedOffer.title}</span>
-                          <span>-{Math.round(selectedDoc.price * appliedOffer.discount_percentage / 100)} جنيه</span>
+                          <span>-{Math.round(selectedDoc.price * appliedDiscountPercentage / 100)} جنيه</span>
                         </div>
                         <div className="border-t border-border pt-2 flex justify-between font-bold">
                           <span className="text-foreground">الإجمالي</span>
