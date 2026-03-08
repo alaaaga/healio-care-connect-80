@@ -69,9 +69,28 @@ export default function BookingPage() {
     });
   }, []);
 
+  const getOfferDiscountPercentage = (offer: any) => {
+    if (!offer) return 0;
+
+    const numericPercentage = Number(offer.discount_percentage);
+    if (Number.isFinite(numericPercentage) && numericPercentage > 0) {
+      return Math.min(100, Math.max(0, numericPercentage));
+    }
+
+    const normalizedDiscountText = String(offer.discount || "")
+      .replace(/[٠-٩]/g, (digit) => "٠١٢٣٤٥٦٧٨٩".indexOf(digit).toString());
+    const textMatch = normalizedDiscountText.match(/(\d+(?:\.\d+)?)/);
+    const parsedPercentage = textMatch ? Number(textMatch[1]) : 0;
+
+    if (!Number.isFinite(parsedPercentage) || parsedPercentage <= 0) return 0;
+    return Math.min(100, Math.max(0, parsedPercentage));
+  };
+
+  const appliedDiscountPercentage = getOfferDiscountPercentage(appliedOffer);
+
   const getDiscountedPrice = (price: number) => {
-    if (!appliedOffer?.discount_percentage) return price;
-    return Math.round(price * (1 - appliedOffer.discount_percentage / 100));
+    if (appliedDiscountPercentage <= 0) return price;
+    return Math.round(price * (1 - appliedDiscountPercentage / 100));
   };
 
   const handleConfirm = async () => {
@@ -214,7 +233,7 @@ export default function BookingPage() {
                 filteredDoctors.map((doc, i) => {
                   const originalPrice = doc.price;
                   const discountedPrice = getDiscountedPrice(originalPrice);
-                  const hasDiscount = appliedOffer && discountedPrice < originalPrice;
+                  const hasDiscount = appliedDiscountPercentage > 0 && discountedPrice < originalPrice;
                   return (
                     <motion.button key={doc.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ x: -4 }} onClick={() => { setSelectedDoctor(doc.id); setStep("datetime"); }} className={cn("glass-card rounded-2xl p-5 w-full text-right flex items-center gap-4 transition-all", selectedDoctor === doc.id && "ring-2 ring-primary")}>
                       <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0">
@@ -230,7 +249,7 @@ export default function BookingPage() {
                             <span className="flex items-center gap-1.5">
                               <span className="line-through text-muted-foreground">{originalPrice}</span>
                               <span className="font-bold text-primary">{discountedPrice} جنيه</span>
-                              <Badge className="bg-primary/10 text-primary border-0 text-[10px] px-1.5">-{appliedOffer.discount_percentage}%</Badge>
+                              <Badge className="bg-primary/10 text-primary border-0 text-[10px] px-1.5">-{appliedDiscountPercentage}%</Badge>
                             </span>
                           ) : (
                             <span>{originalPrice} جنيه</span>
@@ -272,13 +291,13 @@ export default function BookingPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">سعر الكشف</span>
-                      <span className={cn("text-foreground", appliedOffer?.discount_percentage && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
+                      <span className={cn("text-foreground", appliedDiscountPercentage > 0 && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
                     </div>
-                    {appliedOffer?.discount_percentage > 0 && (
+                    {appliedDiscountPercentage > 0 && (
                       <>
                         <div className="flex justify-between text-primary">
                           <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" />خصم {appliedOffer.title}</span>
-                          <span>-{Math.round(selectedDoc.price * appliedOffer.discount_percentage / 100)} جنيه</span>
+                          <span>-{Math.round(selectedDoc.price * appliedDiscountPercentage / 100)} جنيه</span>
                         </div>
                         <div className="border-t border-border pt-2 flex justify-between font-bold">
                           <span className="text-foreground">الإجمالي</span>
@@ -392,12 +411,12 @@ export default function BookingPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">سعر الكشف</span>
-                      <span className={cn("text-foreground", appliedOffer?.discount_percentage && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
+                      <span className={cn("text-foreground", appliedDiscountPercentage > 0 && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
                     </div>
-                    {appliedOffer?.discount_percentage > 0 && (
+                    {appliedDiscountPercentage > 0 && (
                       <div className="flex justify-between text-primary">
                         <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" />خصم {appliedOffer.title}</span>
-                        <span>-{Math.round(selectedDoc.price * appliedOffer.discount_percentage / 100)} جنيه</span>
+                        <span>-{Math.round(selectedDoc.price * appliedDiscountPercentage / 100)} جنيه</span>
                       </div>
                     )}
                     <div className="border-t border-border pt-2 flex justify-between font-bold">
@@ -444,7 +463,7 @@ export default function BookingPage() {
                 {appliedOffer && (
                   <div className="flex justify-between"><span className="text-muted-foreground">العرض:</span><span className="font-medium text-primary">{appliedOffer.title} ({appliedOffer.discount})</span></div>
                 )}
-                {selectedDoc && appliedOffer?.discount_percentage > 0 && (
+                {selectedDoc && appliedDiscountPercentage > 0 && (
                   <div className="flex justify-between"><span className="text-muted-foreground">السعر بعد الخصم:</span><span className="font-bold text-primary">{getDiscountedPrice(selectedDoc.price)} جنيه</span></div>
                 )}
                 <div className="flex justify-between"><span className="text-muted-foreground">طريقة الدفع:</span><span className="font-medium text-foreground">{paymentMethod === "cash" ? "دفع عند الزيارة" : paymentMethod === "card" ? "بطاقة بنكية" : "محفظة إلكترونية"}</span></div>
