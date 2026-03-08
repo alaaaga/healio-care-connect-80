@@ -1,10 +1,18 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, Phone, LayoutDashboard, Moon, Sun, Shield, Stethoscope } from "lucide-react";
+import { Menu, X, Heart, Phone, LayoutDashboard, Moon, Sun, Shield, Stethoscope, User, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/ThemeProvider";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navLinks = [
   { name: "الرئيسية", path: "/" },
@@ -32,6 +40,7 @@ export default function Navbar() {
           </span>
         </Link>
 
+        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             <Link
@@ -48,54 +57,72 @@ export default function Navbar() {
           ))}
         </div>
 
+        {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground">
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
-          <Link to="/contact">
+          
+          <Link to="/contact" className="hidden lg:block">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
               <Phone className="w-4 h-4" />
               الطوارئ
             </Button>
           </Link>
+
           {user ? (
-            <>
-              {isAdmin && (
-                <Link to="/admin">
-                  <Button size="sm" variant="outline" className="gap-2 border-medical-coral text-medical-coral">
-                    <Shield className="w-4 h-4" />
-                    الأدمن
-                  </Button>
-                </Link>
-              )}
-              {isDoctor && (
-                <Link to="/doctor-dashboard">
-                  <Button size="sm" variant="outline" className="gap-2 border-primary text-primary">
-                    <Stethoscope className="w-4 h-4" />
-                    لوحة الطبيب
-                  </Button>
-                </Link>
-              )}
-              <Link to="/dashboard">
-                <Button size="sm" variant="outline" className="gap-2">
-                  <LayoutDashboard className="w-4 h-4" />
-                  لوحة التحكم
+            <DropdownMenu dir="rtl">
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <User className="w-4 h-4" />
+                  حسابي
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
                 </Button>
-              </Link>
-              <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={signOut}>
-                خروج
-              </Button>
-            </>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>مرحباً بك</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="w-full cursor-pointer flex items-center gap-2 text-medical-coral">
+                      <Shield className="w-4 h-4" />
+                      لوحة الأدمن
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {isDoctor && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/doctor-dashboard" className="w-full cursor-pointer flex items-center gap-2 text-primary">
+                      <Stethoscope className="w-4 h-4" />
+                      لوحة الطبيب
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="w-full cursor-pointer flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    لوحة التحكم
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2">
+                  <LogOut className="w-4 h-4" />
+                  تسجيل خروج
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Link to="/login">
               <Button size="sm" variant="outline">تسجيل الدخول</Button>
             </Link>
           )}
+
           <Link to="/booking">
             <Button size="sm" className="gradient-hero-bg text-primary-foreground border-0 shadow-lg shadow-primary/25">احجز الآن</Button>
           </Link>
         </div>
 
+        {/* Mobile Actions */}
         <div className="flex md:hidden items-center gap-2">
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground">
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -106,6 +133,7 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* Mobile Navigation */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -113,9 +141,9 @@ export default function Navbar() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden overflow-hidden border-t border-border/50 bg-background"
+            className="md:hidden overflow-hidden border-t border-border/50 bg-background/95 backdrop-blur-xl"
           >
-            <div className="p-4 space-y-1">
+            <div className="p-4 space-y-2">
               {navLinks.map((link, i) => (
                 <motion.div key={link.path} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
                   <Link
@@ -131,25 +159,54 @@ export default function Navbar() {
                   </Link>
                 </motion.div>
               ))}
-              <div className="pt-3 flex gap-2">
+
+              <div className="pt-4 mt-2 border-t border-border/50 flex flex-col gap-2">
                 {user ? (
                   <>
-                    <Link to="/dashboard" className="flex-1" onClick={() => setMobileOpen(false)}>
-                      <Button variant="outline" className="w-full gap-2"><LayoutDashboard className="w-4 h-4" />لوحة التحكم</Button>
-                    </Link>
-                    <Link to="/booking" className="flex-1" onClick={() => setMobileOpen(false)}>
-                      <Button className="w-full gradient-hero-bg text-primary-foreground border-0">احجز الآن</Button>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      {isAdmin && (
+                        <Link to="/admin" onClick={() => setMobileOpen(false)}>
+                          <Button variant="outline" className="w-full gap-2 border-medical-coral text-medical-coral bg-medical-coral/5">
+                            <Shield className="w-4 h-4" />
+                            الأدمن
+                          </Button>
+                        </Link>
+                      )}
+                      {isDoctor && (
+                        <Link to="/doctor-dashboard" onClick={() => setMobileOpen(false)}>
+                          <Button variant="outline" className="w-full gap-2 border-primary text-primary bg-primary/5">
+                            <Stethoscope className="w-4 h-4" />
+                            لوحة الطبيب
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Link to="/dashboard" className="flex-1" onClick={() => setMobileOpen(false)}>
+                        <Button variant="outline" className="w-full gap-2">
+                          <LayoutDashboard className="w-4 h-4" />
+                          التحكم
+                        </Button>
+                      </Link>
+                      <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => { signOut(); setMobileOpen(false); }}>
+                        <LogOut className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    <Link to="/booking" className="w-full mt-2" onClick={() => setMobileOpen(false)}>
+                      <Button className="w-full gradient-hero-bg text-primary-foreground border-0 shadow-lg shadow-primary/25">احجز الآن</Button>
                     </Link>
                   </>
                 ) : (
-                  <>
+                  <div className="flex gap-2">
                     <Link to="/login" className="flex-1" onClick={() => setMobileOpen(false)}>
-                      <Button variant="outline" className="w-full">تسجيل الدخول</Button>
+                      <Button variant="outline" className="w-full">دخول</Button>
                     </Link>
                     <Link to="/booking" className="flex-1" onClick={() => setMobileOpen(false)}>
-                      <Button className="w-full gradient-hero-bg text-primary-foreground border-0">احجز الآن</Button>
+                      <Button className="w-full gradient-hero-bg text-primary-foreground border-0 shadow-lg shadow-primary/25">احجز الآن</Button>
                     </Link>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
