@@ -233,7 +233,7 @@ export default function BookingPage() {
                 filteredDoctors.map((doc, i) => {
                   const originalPrice = doc.price;
                   const discountedPrice = getDiscountedPrice(originalPrice);
-                  const hasDiscount = appliedOffer && discountedPrice < originalPrice;
+                  const hasDiscount = appliedDiscountPercentage > 0 && discountedPrice < originalPrice;
                   return (
                     <motion.button key={doc.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ x: -4 }} onClick={() => { setSelectedDoctor(doc.id); setStep("datetime"); }} className={cn("glass-card rounded-2xl p-5 w-full text-right flex items-center gap-4 transition-all", selectedDoctor === doc.id && "ring-2 ring-primary")}>
                       <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0">
@@ -249,7 +249,7 @@ export default function BookingPage() {
                             <span className="flex items-center gap-1.5">
                               <span className="line-through text-muted-foreground">{originalPrice}</span>
                               <span className="font-bold text-primary">{discountedPrice} جنيه</span>
-                              <Badge className="bg-primary/10 text-primary border-0 text-[10px] px-1.5">-{appliedOffer.discount_percentage}%</Badge>
+                              <Badge className="bg-primary/10 text-primary border-0 text-[10px] px-1.5">-{appliedDiscountPercentage}%</Badge>
                             </span>
                           ) : (
                             <span>{originalPrice} جنيه</span>
