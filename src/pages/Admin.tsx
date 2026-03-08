@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Calendar, FileText, Stethoscope, TrendingUp, CheckCircle2, Clock, XCircle,
-  Plus, Trash2, Edit, Shield, Pill, Search, Upload, Image, Tag, Download
+  Plus, Trash2, Edit, Shield, Pill, Search, Upload, Image, Tag, Download, BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import AnalyticsTab from "@/components/admin/AnalyticsTab";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -459,6 +460,7 @@ export default function AdminPage() {
               <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" />المقالات</TabsTrigger>
               <TabsTrigger value="offers" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Tag className="w-4 h-4" />العروض</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" />المستخدمين</TabsTrigger>
+              <TabsTrigger value="analytics" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><BarChart3 className="w-4 h-4" />التحليلات</TabsTrigger>
             </TabsList>
 
             {/* Overview */}
@@ -802,6 +804,11 @@ export default function AdminPage() {
                   </TableBody>
                 </Table>
               </div>
+            </TabsContent>
+
+            {/* Analytics */}
+            <TabsContent value="analytics">
+              <AnalyticsTab bookings={bookings} doctors={doctors} profiles={profiles} prescriptions={prescriptions} articles={articles} offers={offers} />
             </TabsContent>
 
             {/* Users */}
