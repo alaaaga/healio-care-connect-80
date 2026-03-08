@@ -290,8 +290,138 @@ export default function BookingPage() {
 
               <div className="flex gap-3">
                 <Button variant="ghost" onClick={() => setStep("doctor")} className="text-muted-foreground">→ رجوع</Button>
-                <Button onClick={handleConfirm} disabled={!selectedDate || !selectedTime || submitting} className="gradient-hero-bg text-primary-foreground border-0 flex-1">
-                  {submitting ? "جاري الحجز..." : "تأكيد الحجز"}
+                <Button onClick={() => setStep("payment")} disabled={!selectedDate || !selectedTime} className="gradient-hero-bg text-primary-foreground border-0 flex-1">
+                  متابعة للدفع
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Payment Step */}
+          {step === "payment" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="glass-card rounded-2xl p-6">
+                <h3 className="font-display font-semibold text-foreground mb-2">اختار طريقة الدفع</h3>
+                <p className="text-sm text-muted-foreground mb-5">اختار الطريقة المناسبة لك (نظام تجريبي)</p>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {[
+                    { method: "cash" as PaymentMethod, icon: Banknote, title: "دفع عند الزيارة", desc: "ادفع كاش في العيادة" },
+                    { method: "card" as PaymentMethod, icon: CreditCard, title: "بطاقة بنكية", desc: "فيزا / ماستركارد" },
+                    { method: "wallet" as PaymentMethod, icon: Wallet, title: "محفظة إلكترونية", desc: "فودافون كاش / أورانج" },
+                  ].map((opt) => (
+                    <motion.button
+                      key={opt.method}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setPaymentMethod(opt.method)}
+                      className={cn(
+                        "glass-card rounded-2xl p-5 text-right transition-all border-2",
+                        paymentMethod === opt.method ? "border-primary bg-primary/5" : "border-transparent"
+                      )}
+                    >
+                      <opt.icon className={cn("w-7 h-7 mb-3", paymentMethod === opt.method ? "text-primary" : "text-muted-foreground")} />
+                      <h4 className="font-display font-semibold text-foreground text-sm">{opt.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card Form (mock) */}
+              {paymentMethod === "card" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
+                  <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />بيانات البطاقة (تجريبي)
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-muted-foreground text-sm mb-1.5">رقم البطاقة</Label>
+                      <Input
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").slice(0, 16))}
+                        placeholder="4242 4242 4242 4242"
+                        dir="ltr"
+                        className="bg-muted/50 text-left tracking-wider"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground text-sm mb-1.5">تاريخ الانتهاء</Label>
+                        <Input
+                          value={cardExpiry}
+                          onChange={(e) => setCardExpiry(e.target.value.replace(/[^\d/]/g, "").slice(0, 5))}
+                          placeholder="12/28"
+                          dir="ltr"
+                          className="bg-muted/50 text-left"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-sm mb-1.5">CVV</Label>
+                        <Input
+                          value={cardCvv}
+                          onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          placeholder="123"
+                          dir="ltr"
+                          type="password"
+                          className="bg-muted/50 text-left"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">🔒 هذا نظام دفع تجريبي — لا يتم خصم أي مبلغ فعلي</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Wallet (mock) */}
+              {paymentMethod === "wallet" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
+                  <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />المحفظة الإلكترونية (تجريبي)
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-3">سيتم إرسال رسالة تأكيد لرقم الموبايل المسجل</p>
+                  <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">🔒 هذا نظام دفع تجريبي — لا يتم خصم أي مبلغ فعلي</p>
+                </motion.div>
+              )}
+
+              {/* Payment Summary */}
+              {selectedDoc && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-2xl p-5">
+                  <h3 className="font-display font-semibold text-foreground mb-3">ملخص الدفع</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">سعر الكشف</span>
+                      <span className={cn("text-foreground", appliedOffer?.discount_percentage && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
+                    </div>
+                    {appliedOffer?.discount_percentage > 0 && (
+                      <div className="flex justify-between text-primary">
+                        <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" />خصم {appliedOffer.title}</span>
+                        <span>-{Math.round(selectedDoc.price * appliedOffer.discount_percentage / 100)} جنيه</span>
+                      </div>
+                    )}
+                    <div className="border-t border-border pt-2 flex justify-between font-bold">
+                      <span className="text-foreground">المطلوب</span>
+                      <span className="text-primary text-lg">{getDiscountedPrice(selectedDoc.price)} جنيه</span>
+                    </div>
+                    {paymentMethod && (
+                      <div className="flex justify-between pt-1">
+                        <span className="text-muted-foreground">طريقة الدفع</span>
+                        <span className="font-medium text-foreground">
+                          {paymentMethod === "cash" ? "دفع عند الزيارة" : paymentMethod === "card" ? "بطاقة بنكية" : "محفظة إلكترونية"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              <div className="flex gap-3">
+                <Button variant="ghost" onClick={() => setStep("datetime")} className="text-muted-foreground">→ رجوع</Button>
+                <Button
+                  onClick={handleConfirm}
+                  disabled={!paymentMethod || submitting || (paymentMethod === "card" && cardNumber.length < 16)}
+                  className="gradient-hero-bg text-primary-foreground border-0 flex-1"
+                >
+                  {submitting ? "جاري الحجز..." : paymentMethod === "cash" ? "تأكيد الحجز" : "ادفع وأكد الحجز"}
                 </Button>
               </div>
             </motion.div>
