@@ -471,6 +471,11 @@ export default function DashboardPage() {
                       </div>
                     ))}
                   </div>
+                  <Link to="/profile" className="block mt-6">
+                    <Button className="gradient-hero-bg text-primary-foreground border-0 gap-2 w-full">
+                      <Settings className="w-4 h-4" />تعديل البيانات وكلمة المرور
+                    </Button>
+                  </Link>
                 </div>
               </TabsContent>
             </Tabs>
