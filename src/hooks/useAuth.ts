@@ -7,6 +7,8 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isDoctor, setIsDoctor] = useState(false);
+  const [doctorProfile, setDoctorProfile] = useState<any>(null);
   const [profile, setProfile] = useState<{ full_name: string; phone: string } | null>(null);
   const mountedRef = useRef(true);
 
@@ -15,17 +17,22 @@ export function useAuth() {
 
     const loadUserData = async (userId: string) => {
       try {
-        const [{ data: profileData }, { data: roleData }] = await Promise.all([
+        const [{ data: profileData }, { data: roleData }, { data: docData }] = await Promise.all([
           supabase.from('profiles').select('full_name, phone').eq('user_id', userId).single(),
           supabase.from('user_roles').select('role').eq('user_id', userId),
+          supabase.from('doctors').select('*').eq('user_id', userId).maybeSingle(),
         ]);
         if (!mountedRef.current) return;
         setProfile(profileData);
         setIsAdmin(roleData?.some(r => r.role === 'admin') ?? false);
+        setIsDoctor(roleData?.some(r => r.role === 'doctor') ?? false);
+        setDoctorProfile(docData);
       } catch {
         if (!mountedRef.current) return;
         setProfile(null);
         setIsAdmin(false);
+        setIsDoctor(false);
+        setDoctorProfile(null);
       }
       if (mountedRef.current) setLoading(false);
     };
@@ -56,6 +63,8 @@ export function useAuth() {
         } else {
           setProfile(null);
           setIsAdmin(false);
+          setIsDoctor(false);
+          setDoctorProfile(null);
           setLoading(false);
         }
       }
@@ -71,5 +80,5 @@ export function useAuth() {
     await supabase.auth.signOut();
   };
 
-  return { user, session, loading, isAdmin, profile, signOut };
+  return { user, session, loading, isAdmin, isDoctor, doctorProfile, profile, signOut };
 }

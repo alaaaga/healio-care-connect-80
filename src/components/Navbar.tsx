@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, Phone, LayoutDashboard, Moon, Sun, Shield } from "lucide-react";
+import { Menu, X, Heart, Phone, LayoutDashboard, Moon, Sun, Shield, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/ThemeProvider";
@@ -16,7 +16,7 @@ const navLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isDoctor, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
@@ -65,6 +65,14 @@ export default function Navbar() {
                   <Button size="sm" variant="outline" className="gap-2 border-medical-coral text-medical-coral">
                     <Shield className="w-4 h-4" />
                     الأدمن
+                  </Button>
+                </Link>
+              )}
+              {isDoctor && (
+                <Link to="/doctor-dashboard">
+                  <Button size="sm" variant="outline" className="gap-2 border-primary text-primary">
+                    <Stethoscope className="w-4 h-4" />
+                    لوحة الطبيب
                   </Button>
                 </Link>
               )}
