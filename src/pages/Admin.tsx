@@ -336,7 +336,7 @@ export default function AdminPage() {
   // Offers CRUD
   const openEditOffer = (o: any) => {
     setEditingOffer(o);
-    setOfferForm({ title: o.title, description: o.description, discount: o.discount, badge: o.badge, ends_at: o.ends_at ? new Date(o.ends_at).toISOString().slice(0, 16) : "" });
+    setOfferForm({ title: o.title, description: o.description, discount: o.discount, discount_percentage: o.discount_percentage || 0, badge: o.badge, ends_at: o.ends_at ? new Date(o.ends_at).toISOString().slice(0, 16) : "" });
     setOfferDialogOpen(true);
   };
 
