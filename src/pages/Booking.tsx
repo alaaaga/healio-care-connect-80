@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Video, MapPin, Star, Clock, CheckCircle2, LogIn } from "lucide-react";
+import { Calendar, Video, MapPin, Star, Clock, CheckCircle2, LogIn, Tag, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,7 @@ const timeSlots = ["٠٩:٠٠ ص", "٠٩:٣٠ ص", "١٠:٠٠ ص", "١٠:٣٠ ص
 
 export default function BookingPage() {
   const { user, loading: authLoading } = useAuth();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>("auth");
   const [bookingType, setBookingType] = useState<BookingType | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
@@ -28,6 +29,25 @@ export default function BookingPage() {
   const [doctors, setDoctors] = useState<any[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [appliedOffer, setAppliedOffer] = useState<any>(null);
+
+  // Load offer from URL params
+  useEffect(() => {
+    const offerId = searchParams.get("offer");
+    if (offerId) {
+      supabase.from("offers").select("*").eq("id", offerId).eq("is_active", true).single().then(({ data }) => {
+        if (data) {
+          // Check if offer hasn't expired
+          if (!data.ends_at || new Date(data.ends_at) > new Date()) {
+            setAppliedOffer(data);
+            toast.success(`تم تطبيق عرض "${data.title}" — خصم ${data.discount}`);
+          } else {
+            toast.error("هذا العرض منتهي الصلاحية");
+          }
+        }
+      });
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -42,6 +62,11 @@ export default function BookingPage() {
     });
   }, []);
 
+  const getDiscountedPrice = (price: number) => {
+    if (!appliedOffer?.discount_percentage) return price;
+    return Math.round(price * (1 - appliedOffer.discount_percentage / 100));
+  };
+
   const handleConfirm = async () => {
     if (!user || !selectedDoctor || !selectedDate || !selectedTime) return;
     setSubmitting(true);
@@ -52,6 +77,7 @@ export default function BookingPage() {
       booking_time: selectedTime,
       type: bookingType || "clinic",
       status: "pending",
+      offer_id: appliedOffer?.id || null,
     });
     setSubmitting(false);
     if (error) {
@@ -83,8 +109,28 @@ export default function BookingPage() {
         <div className="container-narrow max-w-3xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground text-center mb-2">حجز موعد</h1>
-            <p className="text-center text-muted-foreground mb-10">اختار نوع الاستشارة واحجز موعدك بكل سهولة</p>
+            <p className="text-center text-muted-foreground mb-4">اختار نوع الاستشارة واحجز موعدك بكل سهولة</p>
           </motion.div>
+
+          {/* Applied Offer Banner */}
+          {appliedOffer && step !== "confirm" && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 glass-card rounded-2xl p-4 border-2 border-primary/30 bg-primary/5">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Percent className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-display font-bold text-foreground text-sm">عرض مُطبّق: {appliedOffer.title}</p>
+                    <p className="text-xs text-muted-foreground">خصم {appliedOffer.discount} على الكشف</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" className="text-destructive text-xs" onClick={() => { setAppliedOffer(null); toast.info("تم إزالة العرض"); }}>
+                  إزالة العرض
+                </Button>
+              </div>
+            </motion.div>
+          )}
 
           {step === "auth" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-8 md:p-12 text-center max-w-lg mx-auto">
@@ -136,19 +182,38 @@ export default function BookingPage() {
               {loadingDoctors ? (
                 [1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-2xl" />)
               ) : (
-                filteredDoctors.map((doc, i) => (
-                  <motion.button key={doc.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ x: -4 }} onClick={() => { setSelectedDoctor(doc.id); setStep("datetime"); }} className={cn("glass-card rounded-2xl p-5 w-full text-right flex items-center gap-4 transition-all", selectedDoctor === doc.id && "ring-2 ring-primary")}>
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0">👨‍⚕️</div>
-                    <div className="flex-1">
-                      <h3 className="font-display font-semibold text-foreground">{doc.name}</h3>
-                      <p className="text-sm text-primary">{doc.specialty}</p>
-                      <p className="text-xs text-muted-foreground">{doc.location} • {doc.price} جنيه</p>
-                    </div>
-                    <div className="text-left">
-                      <div className="flex items-center gap-1"><Star className="w-4 h-4 fill-medical-gold text-medical-gold" /><span className="text-sm font-medium">{Number(doc.rating).toFixed(1)}</span></div>
-                    </div>
-                  </motion.button>
-                ))
+                filteredDoctors.map((doc, i) => {
+                  const originalPrice = doc.price;
+                  const discountedPrice = getDiscountedPrice(originalPrice);
+                  const hasDiscount = appliedOffer && discountedPrice < originalPrice;
+                  return (
+                    <motion.button key={doc.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ x: -4 }} onClick={() => { setSelectedDoctor(doc.id); setStep("datetime"); }} className={cn("glass-card rounded-2xl p-5 w-full text-right flex items-center gap-4 transition-all", selectedDoctor === doc.id && "ring-2 ring-primary")}>
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0">
+                        {doc.image_url ? <img src={doc.image_url} alt={doc.name} className="w-14 h-14 rounded-2xl object-cover" /> : "👨‍⚕️"}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-display font-semibold text-foreground">{doc.name}</h3>
+                        <p className="text-sm text-primary">{doc.specialty}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <span>{doc.location}</span>
+                          <span>•</span>
+                          {hasDiscount ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="line-through text-muted-foreground">{originalPrice}</span>
+                              <span className="font-bold text-primary">{discountedPrice} جنيه</span>
+                              <Badge className="bg-primary/10 text-primary border-0 text-[10px] px-1.5">-{appliedOffer.discount_percentage}%</Badge>
+                            </span>
+                          ) : (
+                            <span>{originalPrice} جنيه</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-left">
+                        <div className="flex items-center gap-1"><Star className="w-4 h-4 fill-medical-gold text-medical-gold" /><span className="text-sm font-medium">{Number(doc.rating).toFixed(1)}</span></div>
+                      </div>
+                    </motion.button>
+                  );
+                })
               )}
               <Button variant="ghost" onClick={() => setStep("type")} className="text-muted-foreground">→ رجوع</Button>
             </motion.div>
@@ -170,6 +235,32 @@ export default function BookingPage() {
                   </div>
                 </motion.div>
               )}
+
+              {/* Price Summary */}
+              {selectedDoc && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-2xl p-5">
+                  <h3 className="font-display font-semibold text-foreground mb-3">ملخص التكلفة</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">سعر الكشف</span>
+                      <span className={cn("text-foreground", appliedOffer?.discount_percentage && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
+                    </div>
+                    {appliedOffer?.discount_percentage > 0 && (
+                      <>
+                        <div className="flex justify-between text-primary">
+                          <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" />خصم {appliedOffer.title}</span>
+                          <span>-{Math.round(selectedDoc.price * appliedOffer.discount_percentage / 100)} جنيه</span>
+                        </div>
+                        <div className="border-t border-border pt-2 flex justify-between font-bold">
+                          <span className="text-foreground">الإجمالي</span>
+                          <span className="text-primary text-lg">{getDiscountedPrice(selectedDoc.price)} جنيه</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
               <div className="flex gap-3">
                 <Button variant="ghost" onClick={() => setStep("doctor")} className="text-muted-foreground">→ رجوع</Button>
                 <Button onClick={handleConfirm} disabled={!selectedDate || !selectedTime || submitting} className="gradient-hero-bg text-primary-foreground border-0 flex-1">
@@ -191,11 +282,17 @@ export default function BookingPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">الطبيب:</span><span className="font-medium text-foreground">{selectedDoc?.name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">التاريخ:</span><span className="font-medium text-foreground">{selectedDate?.toLocaleDateString("ar-EG")}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">الوقت:</span><span className="font-medium text-foreground">{selectedTime}</span></div>
+                {appliedOffer && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">العرض:</span><span className="font-medium text-primary">{appliedOffer.title} ({appliedOffer.discount})</span></div>
+                )}
+                {selectedDoc && appliedOffer?.discount_percentage > 0 && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">السعر بعد الخصم:</span><span className="font-bold text-primary">{getDiscountedPrice(selectedDoc.price)} جنيه</span></div>
+                )}
                 <div className="flex justify-between"><span className="text-muted-foreground">الحالة:</span><Badge className="bg-medical-green/10 text-medical-green border-0">في الانتظار</Badge></div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
                 <Link to="/dashboard"><Button variant="outline" className="gap-2">متابعة حجوزاتي</Button></Link>
-                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); }}>حجز موعد آخر</Button>
+                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); }}>حجز موعد آخر</Button>
               </div>
             </motion.div>
           )}
