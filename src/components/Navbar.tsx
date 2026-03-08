@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, Phone, LayoutDashboard, Moon, Sun, Shield } from "lucide-react";
+import { Menu, X, Heart, Phone, LayoutDashboard, Moon, Sun, Shield, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/ThemeProvider";
