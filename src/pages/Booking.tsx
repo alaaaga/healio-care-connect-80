@@ -69,9 +69,28 @@ export default function BookingPage() {
     });
   }, []);
 
+  const getOfferDiscountPercentage = (offer: any) => {
+    if (!offer) return 0;
+
+    const numericPercentage = Number(offer.discount_percentage);
+    if (Number.isFinite(numericPercentage) && numericPercentage > 0) {
+      return Math.min(100, Math.max(0, numericPercentage));
+    }
+
+    const normalizedDiscountText = String(offer.discount || "")
+      .replace(/[٠-٩]/g, (digit) => "٠١٢٣٤٥٦٧٨٩".indexOf(digit).toString());
+    const textMatch = normalizedDiscountText.match(/(\d+(?:\.\d+)?)/);
+    const parsedPercentage = textMatch ? Number(textMatch[1]) : 0;
+
+    if (!Number.isFinite(parsedPercentage) || parsedPercentage <= 0) return 0;
+    return Math.min(100, Math.max(0, parsedPercentage));
+  };
+
+  const appliedDiscountPercentage = getOfferDiscountPercentage(appliedOffer);
+
   const getDiscountedPrice = (price: number) => {
-    if (!appliedOffer?.discount_percentage) return price;
-    return Math.round(price * (1 - appliedOffer.discount_percentage / 100));
+    if (appliedDiscountPercentage <= 0) return price;
+    return Math.round(price * (1 - appliedDiscountPercentage / 100));
   };
 
   const handleConfirm = async () => {
