@@ -13,8 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type Step = "auth" | "type" | "doctor" | "datetime" | "confirm";
+type Step = "auth" | "type" | "doctor" | "datetime" | "payment" | "confirm";
 type BookingType = "online" | "clinic";
+type PaymentMethod = "cash" | "card" | "wallet";
 
 const timeSlots = ["٠٩:٠٠ ص", "٠٩:٣٠ ص", "١٠:٠٠ ص", "١٠:٣٠ ص", "١١:٠٠ ص", "٠٢:٠٠ م", "٠٢:٣٠ م", "٠٣:٠٠ م", "٠٣:٣٠ م", "٠٤:٠٠ م"];
 
