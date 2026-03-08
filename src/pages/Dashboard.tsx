@@ -318,8 +318,27 @@ export default function DashboardPage() {
                                     <span>{booking.booking_date}</span><span>{booking.booking_time}</span>
                                   </div>
                                 </div>
-                                <Badge className={`${config.color} border gap-1`}><StatusIcon className="w-3 h-3" />{config.label}</Badge>
-                              </motion.div>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`${config.color} border gap-1`}><StatusIcon className="w-3 h-3" />{config.label}</Badge>
+                                  {booking.status === "completed" && (
+                                    <ReviewDialog
+                                      bookingId={booking.id}
+                                      doctorId={booking.doctor_id}
+                                      doctorName={booking.doctors?.name || ""}
+                                      userId={user!.id}
+                                      existingReview={reviews[booking.id] || null}
+                                      onReviewSubmitted={() => {
+                                        supabase.from("reviews").select("id, rating, comment, booking_id").eq("user_id", user!.id).then(({ data }) => {
+                                          if (data) {
+                                            const map: Record<string, { id: string; rating: number; comment: string }> = {};
+                                            data.forEach((r: any) => { map[r.booking_id] = { id: r.id, rating: r.rating, comment: r.comment }; });
+                                            setReviews(map);
+                                          }
+                                        });
+                                      }}
+                                    />
+                                  )}
+                                </div>
                             );
                           })}
                         </div>
