@@ -851,23 +851,139 @@ export default function AdminPage() {
 
             {/* Users */}
             <TabsContent value="users">
-              <h3 className="font-display font-bold text-foreground mb-4">المستخدمين المسجلين</h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h3 className="font-display font-bold text-foreground">إدارة المستخدمين والصلاحيات</h3>
+                <Input placeholder="بحث بالاسم..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="w-full sm:w-64" />
+              </div>
               <div className="glass-card rounded-2xl overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow><TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">الموبايل</TableHead><TableHead className="text-right">تاريخ التسجيل</TableHead></TableRow>
+                    <TableRow>
+                      <TableHead className="text-right">الاسم</TableHead>
+                      <TableHead className="text-right">الموبايل</TableHead>
+                      <TableHead className="text-right">الصلاحية</TableHead>
+                      <TableHead className="text-right">طبيب مرتبط</TableHead>
+                      <TableHead className="text-right">تاريخ التسجيل</TableHead>
+                      <TableHead className="text-right">إجراءات</TableHead>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {profiles.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.full_name || "غير محدد"}</TableCell>
-                        <TableCell dir="ltr">{p.phone || "—"}</TableCell>
-                        <TableCell>{new Date(p.created_at).toLocaleDateString("ar-EG")}</TableCell>
-                      </TableRow>
-                    ))}
+                    {profiles
+                      .filter((p) => !userSearch || (p.full_name || "").includes(userSearch))
+                      .map((p) => {
+                        const roles = userRoles.filter((r) => r.user_id === p.user_id);
+                        const currentRole = roles.find((r) => r.role === 'admin')?.role || roles.find((r) => r.role === 'doctor')?.role || 'user';
+                        const linkedDoctor = doctors.find((d) => d.user_id === p.user_id);
+                        return (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-medium">{p.full_name || "غير محدد"}</TableCell>
+                            <TableCell dir="ltr">{p.phone || "—"}</TableCell>
+                            <TableCell>
+                              <Select
+                                value={currentRole}
+                                onValueChange={async (newRole) => {
+                                  // Remove old roles
+                                  await supabase.from("user_roles").delete().eq("user_id", p.user_id);
+                                  // Insert new role
+                                  const { error } = await supabase.from("user_roles").insert({ user_id: p.user_id, role: newRole as any });
+                                  if (!error) {
+                                    toast.success("تم تغيير الصلاحية");
+                                    setUserRoles((prev) => [
+                                      ...prev.filter((r) => r.user_id !== p.user_id),
+                                      { user_id: p.user_id, role: newRole },
+                                    ]);
+                                  } else toast.error("حدث خطأ: " + error.message);
+                                }}
+                              >
+                                <SelectTrigger className="w-28 h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="user">مستخدم</SelectItem>
+                                  <SelectItem value="doctor">طبيب</SelectItem>
+                                  <SelectItem value="admin">أدمن</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              {currentRole === 'doctor' ? (
+                                linkedDoctor ? (
+                                  <Badge className="bg-medical-green/10 text-medical-green border-0">{linkedDoctor.name}</Badge>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs gap-1"
+                                    onClick={() => {
+                                      setLinkingUserId(p.user_id);
+                                      setSelectedDoctorToLink("");
+                                      setLinkDoctorDialogOpen(true);
+                                    }}
+                                  >
+                                    <Stethoscope className="w-3 h-3" />ربط بطبيب
+                                  </Button>
+                                )
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{new Date(p.created_at).toLocaleDateString("ar-EG")}</TableCell>
+                            <TableCell>
+                              {linkedDoctor && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive text-xs"
+                                  onClick={async () => {
+                                    await supabase.from("doctors").update({ user_id: null }).eq("id", linkedDoctor.id);
+                                    setDoctors((prev) => prev.map((d) => d.id === linkedDoctor.id ? { ...d, user_id: null } : d));
+                                    toast.success("تم فك ربط الطبيب");
+                                  }}
+                                >
+                                  فك الربط
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Link Doctor Dialog */}
+              <Dialog open={linkDoctorDialogOpen} onOpenChange={setLinkDoctorDialogOpen}>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader><DialogTitle className="font-display">ربط حساب بطبيب</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>اختر الطبيب</Label>
+                      <Select value={selectedDoctorToLink} onValueChange={setSelectedDoctorToLink}>
+                        <SelectTrigger><SelectValue placeholder="اختر طبيب" /></SelectTrigger>
+                        <SelectContent>
+                          {doctors.filter((d) => !d.user_id).map((d) => (
+                            <SelectItem key={d.id} value={d.id}>{d.name} — {d.specialty}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      className="w-full gradient-hero-bg text-primary-foreground border-0"
+                      disabled={!selectedDoctorToLink}
+                      onClick={async () => {
+                        const { error } = await supabase.from("doctors").update({ user_id: linkingUserId }).eq("id", selectedDoctorToLink);
+                        if (!error) {
+                          toast.success("تم ربط الحساب بالطبيب");
+                          setDoctors((prev) => prev.map((d) => d.id === selectedDoctorToLink ? { ...d, user_id: linkingUserId } : d));
+                          setLinkDoctorDialogOpen(false);
+                        } else toast.error("حدث خطأ");
+                      }}
+                    >
+                      ربط
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
           </Tabs>
         </div>
