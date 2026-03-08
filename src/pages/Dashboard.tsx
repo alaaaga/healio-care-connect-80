@@ -85,6 +85,14 @@ export default function DashboardPage() {
       setBookings(bookingsData || []);
       setNotifications(notifsData || []);
       setPrescriptions(prescData || []);
+
+      // Load reviews
+      const { data: reviewsData } = await supabase.from("reviews").select("id, rating, comment, booking_id").eq("user_id", user.id);
+      if (reviewsData) {
+        const map: Record<string, { id: string; rating: number; comment: string }> = {};
+        reviewsData.forEach((r: any) => { map[r.booking_id] = { id: r.id, rating: r.rating, comment: r.comment }; });
+        setReviews(map);
+      }
       setLoadingData(false);
     };
     fetchData();
