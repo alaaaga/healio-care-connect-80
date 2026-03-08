@@ -77,8 +77,10 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [offers, setOffers] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [bookingFilter, setBookingFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
   const [userRoles, setUserRoles] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [linkDoctorDialogOpen, setLinkDoctorDialogOpen] = useState(false);
