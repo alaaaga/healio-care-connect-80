@@ -447,11 +447,13 @@ export default function BookingPage() {
                 {selectedDoc && appliedOffer?.discount_percentage > 0 && (
                   <div className="flex justify-between"><span className="text-muted-foreground">السعر بعد الخصم:</span><span className="font-bold text-primary">{getDiscountedPrice(selectedDoc.price)} جنيه</span></div>
                 )}
+                <div className="flex justify-between"><span className="text-muted-foreground">طريقة الدفع:</span><span className="font-medium text-foreground">{paymentMethod === "cash" ? "دفع عند الزيارة" : paymentMethod === "card" ? "بطاقة بنكية" : "محفظة إلكترونية"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">حالة الدفع:</span><Badge className={paymentMethod === "cash" ? "bg-yellow-500/10 text-yellow-600 border-0" : "bg-medical-green/10 text-medical-green border-0"}>{paymentMethod === "cash" ? "في انتظار الدفع" : "تم الدفع ✓"}</Badge></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">الحالة:</span><Badge className="bg-medical-green/10 text-medical-green border-0">في الانتظار</Badge></div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
                 <Link to="/dashboard"><Button variant="outline" className="gap-2">متابعة حجوزاتي</Button></Link>
-                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); }}>حجز موعد آخر</Button>
+                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); setPaymentMethod(null); setCardNumber(""); setCardExpiry(""); setCardCvv(""); }}>حجز موعد آخر</Button>
               </div>
             </motion.div>
           )}
