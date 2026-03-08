@@ -305,9 +305,9 @@ export default function BookingPage() {
               <div className="glass-card rounded-2xl p-6">
                 <h3 className="font-display font-semibold text-foreground mb-2">اختار طريقة الدفع</h3>
                 <p className="text-sm text-muted-foreground mb-5">اختار الطريقة المناسبة لك (نظام تجريبي)</p>
-                <div className="grid sm:grid-cols-3 gap-4">
+                <div className={cn("grid gap-4", bookingType === "online" ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
                   {[
-                    { method: "cash" as PaymentMethod, icon: Banknote, title: "دفع عند الزيارة", desc: "ادفع كاش في العيادة" },
+                    ...(bookingType !== "online" ? [{ method: "cash" as PaymentMethod, icon: Banknote, title: "دفع عند الزيارة", desc: "ادفع كاش في العيادة" }] : []),
                     { method: "card" as PaymentMethod, icon: CreditCard, title: "بطاقة بنكية", desc: "فيزا / ماستركارد" },
                     { method: "wallet" as PaymentMethod, icon: Wallet, title: "محفظة إلكترونية", desc: "فودافون كاش / أورانج" },
                   ].map((opt) => (
