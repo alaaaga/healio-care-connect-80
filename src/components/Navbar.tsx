@@ -68,6 +68,14 @@ export default function Navbar() {
                   </Button>
                 </Link>
               )}
+              {isDoctor && (
+                <Link to="/doctor-dashboard">
+                  <Button size="sm" variant="outline" className="gap-2 border-primary text-primary">
+                    <Stethoscope className="w-4 h-4" />
+                    لوحة الطبيب
+                  </Button>
+                </Link>
+              )}
               <Link to="/dashboard">
                 <Button size="sm" variant="outline" className="gap-2">
                   <LayoutDashboard className="w-4 h-4" />
