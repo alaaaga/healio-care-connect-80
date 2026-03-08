@@ -249,6 +249,12 @@ export default function AdminPage() {
     toast.success("تم تحديث حالة الحجز");
   };
 
+  const updateBookingQueue = async (id: string, queue_position: number | null, estimated_wait: string | null) => {
+    await supabase.from("bookings").update({ queue_position, estimated_wait }).eq("id", id);
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, queue_position, estimated_wait } : b)));
+    toast.success("تم تحديث بيانات الطابور");
+  };
+
   const deleteCancelledBookings = async () => {
     const cancelledIds = bookings.filter((b) => b.status === "cancelled").map((b) => b.id);
     if (cancelledIds.length === 0) return toast.info("مافيش حجوزات ملغية");
