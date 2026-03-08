@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Video, MapPin, Star, Clock, CheckCircle2, LogIn, Tag, Percent } from "lucide-react";
+import { Calendar, Video, MapPin, Star, Clock, CheckCircle2, LogIn, Tag, Percent, CreditCard, Banknote, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Link, useSearchParams } from "react-router-dom";
@@ -13,8 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type Step = "auth" | "type" | "doctor" | "datetime" | "confirm";
+type Step = "auth" | "type" | "doctor" | "datetime" | "payment" | "confirm";
 type BookingType = "online" | "clinic";
+type PaymentMethod = "cash" | "card" | "wallet";
 
 const timeSlots = ["٠٩:٠٠ ص", "٠٩:٣٠ ص", "١٠:٠٠ ص", "١٠:٣٠ ص", "١١:٠٠ ص", "٠٢:٠٠ م", "٠٢:٣٠ م", "٠٣:٠٠ م", "٠٣:٣٠ م", "٠٤:٠٠ م"];
 
@@ -30,6 +33,10 @@ export default function BookingPage() {
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [appliedOffer, setAppliedOffer] = useState<any>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
 
   // Load offer from URL params
   useEffect(() => {
@@ -68,9 +75,13 @@ export default function BookingPage() {
   };
 
   const handleConfirm = async () => {
-    if (!user || !selectedDoctor || !selectedDate || !selectedTime) return;
+    if (!user || !selectedDoctor || !selectedDate || !selectedTime || !paymentMethod) return;
     setSubmitting(true);
-    const { error } = await supabase.from("bookings").insert({
+
+    const selectedDoc = doctors.find((d) => d.id === selectedDoctor);
+    const finalAmount = selectedDoc ? getDiscountedPrice(selectedDoc.price) : 0;
+
+    const { data: bookingData, error } = await supabase.from("bookings").insert({
       user_id: user.id,
       doctor_id: selectedDoctor,
       booking_date: selectedDate.toISOString().split("T")[0],
@@ -78,20 +89,38 @@ export default function BookingPage() {
       type: bookingType || "clinic",
       status: "pending",
       offer_id: appliedOffer?.id || null,
-    });
-    setSubmitting(false);
-    if (error) {
+    }).select().single();
+
+    if (error || !bookingData) {
       toast.error("حدث خطأ في الحجز. حاول تاني.");
-    } else {
-      setStep("confirm");
-      toast.success("تم الحجز بنجاح! 🎉");
+      setSubmitting(false);
+      return;
     }
+
+    // Create mock payment record
+    const { error: payError } = await supabase.from("payments").insert({
+      booking_id: bookingData.id,
+      user_id: user.id,
+      amount: finalAmount,
+      payment_method: paymentMethod,
+      status: paymentMethod === "cash" ? "pending" : "completed",
+      card_last4: paymentMethod === "card" ? cardNumber.slice(-4) : "",
+      transaction_ref: paymentMethod !== "cash" ? `TXN-${Date.now().toString(36).toUpperCase()}` : "",
+    });
+
+    setSubmitting(false);
+    if (payError) {
+      toast.error("تم الحجز لكن فشل تسجيل الدفع");
+    }
+    setStep("confirm");
+    toast.success("تم الحجز بنجاح! 🎉");
   };
 
   const allSteps: { key: Step; label: string }[] = [
     { key: "type", label: "نوع الزيارة" },
     { key: "doctor", label: "اختيار الطبيب" },
     { key: "datetime", label: "التاريخ والوقت" },
+    { key: "payment", label: "الدفع" },
     { key: "confirm", label: "تأكيد الحجز" },
   ];
   const stepIndex = allSteps.findIndex((s) => s.key === step);
@@ -263,8 +292,138 @@ export default function BookingPage() {
 
               <div className="flex gap-3">
                 <Button variant="ghost" onClick={() => setStep("doctor")} className="text-muted-foreground">→ رجوع</Button>
-                <Button onClick={handleConfirm} disabled={!selectedDate || !selectedTime || submitting} className="gradient-hero-bg text-primary-foreground border-0 flex-1">
-                  {submitting ? "جاري الحجز..." : "تأكيد الحجز"}
+                <Button onClick={() => setStep("payment")} disabled={!selectedDate || !selectedTime} className="gradient-hero-bg text-primary-foreground border-0 flex-1">
+                  متابعة للدفع
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Payment Step */}
+          {step === "payment" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="glass-card rounded-2xl p-6">
+                <h3 className="font-display font-semibold text-foreground mb-2">اختار طريقة الدفع</h3>
+                <p className="text-sm text-muted-foreground mb-5">اختار الطريقة المناسبة لك (نظام تجريبي)</p>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {[
+                    { method: "cash" as PaymentMethod, icon: Banknote, title: "دفع عند الزيارة", desc: "ادفع كاش في العيادة" },
+                    { method: "card" as PaymentMethod, icon: CreditCard, title: "بطاقة بنكية", desc: "فيزا / ماستركارد" },
+                    { method: "wallet" as PaymentMethod, icon: Wallet, title: "محفظة إلكترونية", desc: "فودافون كاش / أورانج" },
+                  ].map((opt) => (
+                    <motion.button
+                      key={opt.method}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setPaymentMethod(opt.method)}
+                      className={cn(
+                        "glass-card rounded-2xl p-5 text-right transition-all border-2",
+                        paymentMethod === opt.method ? "border-primary bg-primary/5" : "border-transparent"
+                      )}
+                    >
+                      <opt.icon className={cn("w-7 h-7 mb-3", paymentMethod === opt.method ? "text-primary" : "text-muted-foreground")} />
+                      <h4 className="font-display font-semibold text-foreground text-sm">{opt.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card Form (mock) */}
+              {paymentMethod === "card" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
+                  <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />بيانات البطاقة (تجريبي)
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-muted-foreground text-sm mb-1.5">رقم البطاقة</Label>
+                      <Input
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").slice(0, 16))}
+                        placeholder="4242 4242 4242 4242"
+                        dir="ltr"
+                        className="bg-muted/50 text-left tracking-wider"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground text-sm mb-1.5">تاريخ الانتهاء</Label>
+                        <Input
+                          value={cardExpiry}
+                          onChange={(e) => setCardExpiry(e.target.value.replace(/[^\d/]/g, "").slice(0, 5))}
+                          placeholder="12/28"
+                          dir="ltr"
+                          className="bg-muted/50 text-left"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-sm mb-1.5">CVV</Label>
+                        <Input
+                          value={cardCvv}
+                          onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          placeholder="123"
+                          dir="ltr"
+                          type="password"
+                          className="bg-muted/50 text-left"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">🔒 هذا نظام دفع تجريبي — لا يتم خصم أي مبلغ فعلي</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Wallet (mock) */}
+              {paymentMethod === "wallet" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
+                  <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />المحفظة الإلكترونية (تجريبي)
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-3">سيتم إرسال رسالة تأكيد لرقم الموبايل المسجل</p>
+                  <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">🔒 هذا نظام دفع تجريبي — لا يتم خصم أي مبلغ فعلي</p>
+                </motion.div>
+              )}
+
+              {/* Payment Summary */}
+              {selectedDoc && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-2xl p-5">
+                  <h3 className="font-display font-semibold text-foreground mb-3">ملخص الدفع</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">سعر الكشف</span>
+                      <span className={cn("text-foreground", appliedOffer?.discount_percentage && "line-through text-muted-foreground")}>{selectedDoc.price} جنيه</span>
+                    </div>
+                    {appliedOffer?.discount_percentage > 0 && (
+                      <div className="flex justify-between text-primary">
+                        <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" />خصم {appliedOffer.title}</span>
+                        <span>-{Math.round(selectedDoc.price * appliedOffer.discount_percentage / 100)} جنيه</span>
+                      </div>
+                    )}
+                    <div className="border-t border-border pt-2 flex justify-between font-bold">
+                      <span className="text-foreground">المطلوب</span>
+                      <span className="text-primary text-lg">{getDiscountedPrice(selectedDoc.price)} جنيه</span>
+                    </div>
+                    {paymentMethod && (
+                      <div className="flex justify-between pt-1">
+                        <span className="text-muted-foreground">طريقة الدفع</span>
+                        <span className="font-medium text-foreground">
+                          {paymentMethod === "cash" ? "دفع عند الزيارة" : paymentMethod === "card" ? "بطاقة بنكية" : "محفظة إلكترونية"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              <div className="flex gap-3">
+                <Button variant="ghost" onClick={() => setStep("datetime")} className="text-muted-foreground">→ رجوع</Button>
+                <Button
+                  onClick={handleConfirm}
+                  disabled={!paymentMethod || submitting || (paymentMethod === "card" && cardNumber.length < 16)}
+                  className="gradient-hero-bg text-primary-foreground border-0 flex-1"
+                >
+                  {submitting ? "جاري الحجز..." : paymentMethod === "cash" ? "تأكيد الحجز" : "ادفع وأكد الحجز"}
                 </Button>
               </div>
             </motion.div>
@@ -288,11 +447,13 @@ export default function BookingPage() {
                 {selectedDoc && appliedOffer?.discount_percentage > 0 && (
                   <div className="flex justify-between"><span className="text-muted-foreground">السعر بعد الخصم:</span><span className="font-bold text-primary">{getDiscountedPrice(selectedDoc.price)} جنيه</span></div>
                 )}
+                <div className="flex justify-between"><span className="text-muted-foreground">طريقة الدفع:</span><span className="font-medium text-foreground">{paymentMethod === "cash" ? "دفع عند الزيارة" : paymentMethod === "card" ? "بطاقة بنكية" : "محفظة إلكترونية"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">حالة الدفع:</span><Badge className={paymentMethod === "cash" ? "bg-yellow-500/10 text-yellow-600 border-0" : "bg-medical-green/10 text-medical-green border-0"}>{paymentMethod === "cash" ? "في انتظار الدفع" : "تم الدفع ✓"}</Badge></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">الحالة:</span><Badge className="bg-medical-green/10 text-medical-green border-0">في الانتظار</Badge></div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
                 <Link to="/dashboard"><Button variant="outline" className="gap-2">متابعة حجوزاتي</Button></Link>
-                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); }}>حجز موعد آخر</Button>
+                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); setPaymentMethod(null); setCardNumber(""); setCardExpiry(""); setCardCvv(""); }}>حجز موعد آخر</Button>
               </div>
             </motion.div>
           )}

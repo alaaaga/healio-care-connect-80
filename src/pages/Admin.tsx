@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Calendar, FileText, Stethoscope, TrendingUp, CheckCircle2, Clock, XCircle,
-  Plus, Trash2, Edit, Shield, Pill, Search, Upload, Image, Tag, Download, BarChart3
+  Plus, Trash2, Edit, Shield, Pill, Search, Upload, Image, Tag, Download, BarChart3,
+  CreditCard, Banknote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,8 +77,10 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [offers, setOffers] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [bookingFilter, setBookingFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
   const [userRoles, setUserRoles] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [linkDoctorDialogOpen, setLinkDoctorDialogOpen] = useState(false);
@@ -118,7 +121,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!user || !isAdmin) return;
     const fetchAll = async () => {
-      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }, { data: o }, { data: ur }] = await Promise.all([
+      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }, { data: o }, { data: ur }, { data: pay }] = await Promise.all([
         supabase.from("doctors").select("*").order("created_at", { ascending: false }),
         supabase.from("bookings").select("*, doctors(name, specialty)").order("created_at", { ascending: false }),
         supabase.from("articles").select("*").order("created_at", { ascending: false }),
@@ -126,6 +129,7 @@ export default function AdminPage() {
         supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date)").order("created_at", { ascending: false }),
         supabase.from("offers").select("*").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("*").order("user_id"),
+        supabase.from("payments").select("*, bookings(booking_date, doctors(name))").order("created_at", { ascending: false }),
       ]);
       const profileMap = new Map((p || []).map((prof: any) => [prof.user_id, prof.full_name]));
       const bookingsWithNames = (b || []).map((booking: any) => ({
@@ -143,6 +147,11 @@ export default function AdminPage() {
       setPrescriptions(prescsWithNames);
       setOffers(o || []);
       setUserRoles(ur || []);
+      const payWithNames = (pay || []).map((pm: any) => ({
+        ...pm,
+        patient_name: profileMap.get(pm.user_id) || "مستخدم",
+      }));
+      setPayments(payWithNames);
       setLoadingData(false);
     };
     fetchAll();
@@ -474,6 +483,7 @@ export default function AdminPage() {
               <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" />المقالات</TabsTrigger>
               <TabsTrigger value="offers" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Tag className="w-4 h-4" />العروض</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" />المستخدمين</TabsTrigger>
+              <TabsTrigger value="payments" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><CreditCard className="w-4 h-4" />المدفوعات</TabsTrigger>
               <TabsTrigger value="analytics" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><BarChart3 className="w-4 h-4" />التحليلات</TabsTrigger>
             </TabsList>
 
@@ -847,6 +857,111 @@ export default function AdminPage() {
             {/* Analytics */}
             <TabsContent value="analytics">
               <AnalyticsTab bookings={bookings} doctors={doctors} profiles={profiles} prescriptions={prescriptions} articles={articles} offers={offers} />
+            </TabsContent>
+
+            {/* Payments */}
+            <TabsContent value="payments">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h3 className="font-display font-bold text-foreground">إدارة المدفوعات</h3>
+                <div className="flex gap-2 flex-wrap">
+                  {["all", "pending", "completed", "refunded"].map((f) => (
+                    <Button key={f} size="sm" variant={paymentFilter === f ? "default" : "outline"}
+                      onClick={() => setPaymentFilter(f)}
+                      className={paymentFilter === f ? "gradient-hero-bg text-primary-foreground border-0" : ""}>
+                      {f === "all" ? "الكل" : f === "pending" ? "في الانتظار" : f === "completed" ? "مكتمل" : "مسترد"}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Payment Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                {[
+                  { label: "إجمالي المدفوعات", value: payments.length, icon: CreditCard, color: "text-primary" },
+                  { label: "مكتملة", value: payments.filter(p => p.status === "completed").length, icon: CheckCircle2, color: "text-medical-green" },
+                  { label: "في الانتظار", value: payments.filter(p => p.status === "pending").length, icon: Clock, color: "text-yellow-600" },
+                  { label: "إجمالي الإيرادات", value: `${payments.filter(p => p.status === "completed").reduce((s: number, p: any) => s + p.amount, 0)} ج`, icon: Banknote, color: "text-medical-gold" },
+                ].map((stat) => (
+                  <div key={stat.label} className="glass-card rounded-2xl p-4 text-center">
+                    <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2`} />
+                    <p className="font-display font-bold text-lg text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>المريض</TableHead>
+                      <TableHead>الطبيب</TableHead>
+                      <TableHead>المبلغ</TableHead>
+                      <TableHead>الطريقة</TableHead>
+                      <TableHead>الحالة</TableHead>
+                      <TableHead>المرجع</TableHead>
+                      <TableHead>التاريخ</TableHead>
+                      <TableHead>إجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments
+                      .filter((p) => paymentFilter === "all" || p.status === paymentFilter)
+                      .map((payment) => {
+                        const methodLabel = payment.payment_method === "cash" ? "كاش" : payment.payment_method === "card" ? "بطاقة" : "محفظة";
+                        const statusMap: Record<string, { label: string; cls: string }> = {
+                          pending: { label: "انتظار", cls: "bg-yellow-500/10 text-yellow-600" },
+                          completed: { label: "مكتمل", cls: "bg-medical-green/10 text-medical-green" },
+                          refunded: { label: "مسترد", cls: "bg-destructive/10 text-destructive" },
+                        };
+                        const st = statusMap[payment.status] || statusMap.pending;
+                        return (
+                          <TableRow key={payment.id}>
+                            <TableCell className="font-medium">{payment.patient_name}</TableCell>
+                            <TableCell>{payment.bookings?.doctors?.name || "—"}</TableCell>
+                            <TableCell className="font-bold">{payment.amount} جنيه</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">{methodLabel}{payment.card_last4 ? ` ****${payment.card_last4}` : ""}</Badge>
+                            </TableCell>
+                            <TableCell><Badge className={`${st.cls} border-0`}>{st.label}</Badge></TableCell>
+                            <TableCell className="text-xs text-muted-foreground" dir="ltr">{payment.transaction_ref || "—"}</TableCell>
+                            <TableCell className="text-xs">{new Date(payment.created_at).toLocaleDateString("ar-EG")}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {payment.status === "pending" && (
+                                  <Button size="sm" variant="outline" className="text-xs text-medical-green border-medical-green/30"
+                                    onClick={async () => {
+                                      await supabase.from("payments").update({ status: "completed", transaction_ref: `TXN-${Date.now().toString(36).toUpperCase()}` }).eq("id", payment.id);
+                                      setPayments(prev => prev.map(p => p.id === payment.id ? { ...p, status: "completed", transaction_ref: `TXN-${Date.now().toString(36).toUpperCase()}` } : p));
+                                      toast.success("تم تأكيد الدفع");
+                                    }}>
+                                    <CheckCircle2 className="w-3 h-3 ml-1" />تأكيد
+                                  </Button>
+                                )}
+                                {payment.status === "completed" && (
+                                  <Button size="sm" variant="outline" className="text-xs text-destructive border-destructive/30"
+                                    onClick={async () => {
+                                      await supabase.from("payments").update({ status: "refunded" }).eq("id", payment.id);
+                                      setPayments(prev => prev.map(p => p.id === payment.id ? { ...p, status: "refunded" } : p));
+                                      toast.success("تم الاسترداد");
+                                    }}>
+                                    استرداد
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                  </TableBody>
+                </Table>
+                {payments.filter((p) => paymentFilter === "all" || p.status === paymentFilter).length === 0 && (
+                  <div className="text-center py-12">
+                    <CreditCard className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">لا توجد مدفوعات</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             {/* Users */}

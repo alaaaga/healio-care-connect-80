@@ -236,6 +236,56 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          card_last4: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string
+          status: string
+          transaction_ref: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          booking_id: string
+          card_last4?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          status?: string
+          transaction_ref?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          card_last4?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          status?: string
+          transaction_ref?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prescriptions: {
         Row: {
           booking_id: string
