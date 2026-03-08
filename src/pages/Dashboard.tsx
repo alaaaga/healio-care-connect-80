@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Calendar, Clock, User, LogOut, Bell, CheckCircle2, XCircle, AlertCircle, Timer, Users, Pill, Download, Navigation
+  Calendar, Clock, User, LogOut, Bell, CheckCircle2, XCircle, AlertCircle, Timer, Users, Pill, Download, Navigation, Star, Settings
 } from "lucide-react";
+import ReviewDialog from "@/components/ReviewDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
