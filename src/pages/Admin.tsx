@@ -806,6 +806,11 @@ export default function AdminPage() {
               </div>
             </TabsContent>
 
+            {/* Analytics */}
+            <TabsContent value="analytics">
+              <AnalyticsTab bookings={bookings} doctors={doctors} profiles={profiles} prescriptions={prescriptions} articles={articles} offers={offers} />
+            </TabsContent>
+
             {/* Users */}
             <TabsContent value="users">
               <h3 className="font-display font-bold text-foreground mb-4">المستخدمين المسجلين</h3>
