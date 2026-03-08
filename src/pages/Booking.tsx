@@ -463,7 +463,7 @@ export default function BookingPage() {
                 {appliedOffer && (
                   <div className="flex justify-between"><span className="text-muted-foreground">العرض:</span><span className="font-medium text-primary">{appliedOffer.title} ({appliedOffer.discount})</span></div>
                 )}
-                {selectedDoc && appliedOffer?.discount_percentage > 0 && (
+                {selectedDoc && appliedDiscountPercentage > 0 && (
                   <div className="flex justify-between"><span className="text-muted-foreground">السعر بعد الخصم:</span><span className="font-bold text-primary">{getDiscountedPrice(selectedDoc.price)} جنيه</span></div>
                 )}
                 <div className="flex justify-between"><span className="text-muted-foreground">طريقة الدفع:</span><span className="font-medium text-foreground">{paymentMethod === "cash" ? "دفع عند الزيارة" : paymentMethod === "card" ? "بطاقة بنكية" : "محفظة إلكترونية"}</span></div>
