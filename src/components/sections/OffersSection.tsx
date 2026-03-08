@@ -134,9 +134,11 @@ export default function OffersSection() {
                 <h3 className="font-display font-semibold text-foreground mb-2">{offer.title}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{offer.description}</p>
                 {offer.ends_at && <Countdown target={new Date(offer.ends_at)} />}
-                <Button size="sm" className="w-full mt-4 gradient-hero-bg text-primary-foreground border-0">
-                  احصل على العرض
-                </Button>
+                <Link to={`/booking?offer=${offer.id}`}>
+                  <Button size="sm" className="w-full mt-4 gradient-hero-bg text-primary-foreground border-0">
+                    احصل على العرض
+                  </Button>
+                </Link>
               </motion.div>
             );
           })}
