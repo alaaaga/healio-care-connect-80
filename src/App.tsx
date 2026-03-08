@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import DoctorDashboard from "./pages/DoctorDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
