@@ -118,13 +118,14 @@ export default function AdminPage() {
   useEffect(() => {
     if (!user || !isAdmin) return;
     const fetchAll = async () => {
-      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }, { data: o }] = await Promise.all([
+      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }, { data: o }, { data: ur }] = await Promise.all([
         supabase.from("doctors").select("*").order("created_at", { ascending: false }),
         supabase.from("bookings").select("*, doctors(name, specialty)").order("created_at", { ascending: false }),
         supabase.from("articles").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
         supabase.from("prescriptions").select("*, doctors(name), bookings(booking_date)").order("created_at", { ascending: false }),
         supabase.from("offers").select("*").order("created_at", { ascending: false }),
+        supabase.from("user_roles").select("*").order("user_id"),
       ]);
       const profileMap = new Map((p || []).map((prof: any) => [prof.user_id, prof.full_name]));
       const bookingsWithNames = (b || []).map((booking: any) => ({
