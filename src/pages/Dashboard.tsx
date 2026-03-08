@@ -166,6 +166,11 @@ export default function DashboardPage() {
                     <Calendar className="w-4 h-4" />حجز موعد جديد
                   </Button>
                 </Link>
+                <Link to="/profile">
+                  <Button variant="outline" className="gap-2 text-muted-foreground">
+                    <Settings className="w-4 h-4" />ملفي الشخصي
+                  </Button>
+                </Link>
                 <Button variant="outline" onClick={signOut} className="gap-2 text-muted-foreground">
                   <LogOut className="w-4 h-4" />خروج
                 </Button>
