@@ -118,6 +118,7 @@ export default function BookingPage() {
     { key: "type", label: "نوع الزيارة" },
     { key: "doctor", label: "اختيار الطبيب" },
     { key: "datetime", label: "التاريخ والوقت" },
+    { key: "payment", label: "الدفع" },
     { key: "confirm", label: "تأكيد الحجز" },
   ];
   const stepIndex = allSteps.findIndex((s) => s.key === step);
