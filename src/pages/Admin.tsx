@@ -142,6 +142,7 @@ export default function AdminPage() {
       setProfiles(p || []);
       setPrescriptions(prescsWithNames);
       setOffers(o || []);
+      setUserRoles(ur || []);
       setLoadingData(false);
     };
     fetchAll();
