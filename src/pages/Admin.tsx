@@ -483,6 +483,7 @@ export default function AdminPage() {
               <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" />المقالات</TabsTrigger>
               <TabsTrigger value="offers" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Tag className="w-4 h-4" />العروض</TabsTrigger>
               <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" />المستخدمين</TabsTrigger>
+              <TabsTrigger value="payments" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><CreditCard className="w-4 h-4" />المدفوعات</TabsTrigger>
               <TabsTrigger value="analytics" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><BarChart3 className="w-4 h-4" />التحليلات</TabsTrigger>
             </TabsList>
 
