@@ -16,7 +16,7 @@ const navLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isDoctor, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
