@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Calendar, Clock, User, LogOut, Bell, CheckCircle2, XCircle, AlertCircle, Timer, Users, Pill, Download, Navigation
+  Calendar, Clock, User, LogOut, Bell, CheckCircle2, XCircle, AlertCircle, Timer, Users, Pill, Download, Navigation, Star, Settings
 } from "lucide-react";
+import ReviewDialog from "@/components/ReviewDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -64,6 +65,7 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [reviews, setReviews] = useState<Record<string, { id: string; rating: number; comment: string }>>({});
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -83,6 +85,14 @@ export default function DashboardPage() {
       setBookings(bookingsData || []);
       setNotifications(notifsData || []);
       setPrescriptions(prescData || []);
+
+      // Load reviews
+      const { data: reviewsData } = await supabase.from("reviews").select("id, rating, comment, booking_id").eq("user_id", user.id);
+      if (reviewsData) {
+        const map: Record<string, { id: string; rating: number; comment: string }> = {};
+        reviewsData.forEach((r: any) => { map[r.booking_id] = { id: r.id, rating: r.rating, comment: r.comment }; });
+        setReviews(map);
+      }
       setLoadingData(false);
     };
     fetchData();
@@ -154,6 +164,11 @@ export default function DashboardPage() {
                 <Link to="/booking">
                   <Button className="gradient-hero-bg text-primary-foreground border-0 shadow-lg shadow-primary/25 gap-2">
                     <Calendar className="w-4 h-4" />حجز موعد جديد
+                  </Button>
+                </Link>
+                <Link to="/profile">
+                  <Button variant="outline" className="gap-2 text-muted-foreground">
+                    <Settings className="w-4 h-4" />ملفي الشخصي
                   </Button>
                 </Link>
                 <Button variant="outline" onClick={signOut} className="gap-2 text-muted-foreground">
@@ -303,7 +318,27 @@ export default function DashboardPage() {
                                     <span>{booking.booking_date}</span><span>{booking.booking_time}</span>
                                   </div>
                                 </div>
-                                <Badge className={`${config.color} border gap-1`}><StatusIcon className="w-3 h-3" />{config.label}</Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`${config.color} border gap-1`}><StatusIcon className="w-3 h-3" />{config.label}</Badge>
+                                  {booking.status === "completed" && (
+                                    <ReviewDialog
+                                      bookingId={booking.id}
+                                      doctorId={booking.doctor_id}
+                                      doctorName={booking.doctors?.name || ""}
+                                      userId={user!.id}
+                                      existingReview={reviews[booking.id] || null}
+                                      onReviewSubmitted={() => {
+                                        supabase.from("reviews").select("id, rating, comment, booking_id").eq("user_id", user!.id).then(({ data }) => {
+                                          if (data) {
+                                            const map: Record<string, { id: string; rating: number; comment: string }> = {};
+                                            data.forEach((r: any) => { map[r.booking_id] = { id: r.id, rating: r.rating, comment: r.comment }; });
+                                            setReviews(map);
+                                          }
+                                        });
+                                      }}
+                                    />
+                                  )}
+                                </div>
                               </motion.div>
                             );
                           })}
@@ -436,6 +471,11 @@ export default function DashboardPage() {
                       </div>
                     ))}
                   </div>
+                  <Link to="/profile" className="block mt-6">
+                    <Button className="gradient-hero-bg text-primary-foreground border-0 gap-2 w-full">
+                      <Settings className="w-4 h-4" />تعديل البيانات وكلمة المرور
+                    </Button>
+                  </Link>
                 </div>
               </TabsContent>
             </Tabs>

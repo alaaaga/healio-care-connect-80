@@ -16,6 +16,7 @@ import Admin from "./pages/Admin";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import DoctorDashboard from "./pages/DoctorDashboard";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
