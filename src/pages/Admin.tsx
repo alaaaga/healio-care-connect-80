@@ -99,7 +99,7 @@ export default function AdminPage() {
   const [editingPresc, setEditingPresc] = useState<any>(null);
 
   // Offer form
-  const [offerForm, setOfferForm] = useState({ title: "", description: "", discount: "", badge: "عرض", ends_at: "" });
+  const [offerForm, setOfferForm] = useState({ title: "", description: "", discount: "", discount_percentage: 0, badge: "عرض", ends_at: "" });
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<any>(null);
 
