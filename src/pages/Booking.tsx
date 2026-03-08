@@ -73,9 +73,13 @@ export default function BookingPage() {
   };
 
   const handleConfirm = async () => {
-    if (!user || !selectedDoctor || !selectedDate || !selectedTime) return;
+    if (!user || !selectedDoctor || !selectedDate || !selectedTime || !paymentMethod) return;
     setSubmitting(true);
-    const { error } = await supabase.from("bookings").insert({
+
+    const selectedDoc = doctors.find((d) => d.id === selectedDoctor);
+    const finalAmount = selectedDoc ? getDiscountedPrice(selectedDoc.price) : 0;
+
+    const { data: bookingData, error } = await supabase.from("bookings").insert({
       user_id: user.id,
       doctor_id: selectedDoctor,
       booking_date: selectedDate.toISOString().split("T")[0],
@@ -83,14 +87,31 @@ export default function BookingPage() {
       type: bookingType || "clinic",
       status: "pending",
       offer_id: appliedOffer?.id || null,
-    });
-    setSubmitting(false);
-    if (error) {
+    }).select().single();
+
+    if (error || !bookingData) {
       toast.error("حدث خطأ في الحجز. حاول تاني.");
-    } else {
-      setStep("confirm");
-      toast.success("تم الحجز بنجاح! 🎉");
+      setSubmitting(false);
+      return;
     }
+
+    // Create mock payment record
+    const { error: payError } = await supabase.from("payments").insert({
+      booking_id: bookingData.id,
+      user_id: user.id,
+      amount: finalAmount,
+      payment_method: paymentMethod,
+      status: paymentMethod === "cash" ? "pending" : "completed",
+      card_last4: paymentMethod === "card" ? cardNumber.slice(-4) : "",
+      transaction_ref: paymentMethod !== "cash" ? `TXN-${Date.now().toString(36).toUpperCase()}` : "",
+    });
+
+    setSubmitting(false);
+    if (payError) {
+      toast.error("تم الحجز لكن فشل تسجيل الدفع");
+    }
+    setStep("confirm");
+    toast.success("تم الحجز بنجاح! 🎉");
   };
 
   const allSteps: { key: Step; label: string }[] = [
