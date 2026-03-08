@@ -351,6 +351,7 @@ export default function AdminPage() {
       title: offerForm.title,
       description: offerForm.description,
       discount: offerForm.discount,
+      discount_percentage: offerForm.discount_percentage,
       badge: offerForm.badge,
       ends_at: offerForm.ends_at ? new Date(offerForm.ends_at).toISOString() : null,
       is_active: true,
