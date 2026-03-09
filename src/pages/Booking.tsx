@@ -566,7 +566,7 @@ export default function BookingPage() {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
                 <Link to="/dashboard"><Button variant="outline" className="gap-2">متابعة حجوزاتي</Button></Link>
-                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); setPaymentMethod(null); setCardNumber(""); setCardExpiry(""); setCardCvv(""); }}>حجز موعد آخر</Button>
+                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); setAppliedCoupon(null); setCouponCode(""); setPaymentMethod(null); setCardNumber(""); setCardExpiry(""); setCardCvv(""); }}>حجز موعد آخر</Button>
               </div>
             </motion.div>
           )}
