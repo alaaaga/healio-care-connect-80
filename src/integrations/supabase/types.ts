@@ -60,6 +60,7 @@ export type Database = {
         Row: {
           booking_date: string
           booking_time: string
+          coupon_id: string | null
           created_at: string
           doctor_id: string
           estimated_wait: string | null
@@ -75,6 +76,7 @@ export type Database = {
         Insert: {
           booking_date: string
           booking_time: string
+          coupon_id?: string | null
           created_at?: string
           doctor_id: string
           estimated_wait?: string | null
@@ -90,6 +92,7 @@ export type Database = {
         Update: {
           booking_date?: string
           booking_time?: string
+          coupon_id?: string | null
           created_at?: string
           doctor_id?: string
           estimated_wait?: string | null
@@ -103,6 +106,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_doctor_id_fkey"
             columns: ["doctor_id"]
@@ -118,6 +128,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          min_amount: number | null
+          updated_at: string
+          used_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_amount?: number | null
+          updated_at?: string
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_amount?: number | null
+          updated_at?: string
+          used_count?: number
+        }
+        Relationships: []
       }
       doctors: {
         Row: {
@@ -241,6 +296,7 @@ export type Database = {
           amount: number
           booking_id: string
           card_last4: string | null
+          coupon_code: string | null
           created_at: string
           id: string
           notes: string | null
@@ -254,6 +310,7 @@ export type Database = {
           amount?: number
           booking_id: string
           card_last4?: string | null
+          coupon_code?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -267,6 +324,7 @@ export type Database = {
           amount?: number
           booking_id?: string
           card_last4?: string | null
+          coupon_code?: string | null
           created_at?: string
           id?: string
           notes?: string | null
