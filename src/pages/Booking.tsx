@@ -503,6 +503,12 @@ export default function BookingPage() {
                         <span>-{Math.round(selectedDoc.price * appliedDiscountPercentage / 100)} جنيه</span>
                       </div>
                     )}
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-primary">
+                        <span className="flex items-center gap-1"><Percent className="w-3.5 h-3.5" />كوبون {appliedCoupon.code}</span>
+                        <span>-{getCouponDiscount(appliedDiscountPercentage > 0 ? Math.round(selectedDoc.price * (1 - appliedDiscountPercentage / 100)) : selectedDoc.price)} جنيه</span>
+                      </div>
+                    )}
                     <div className="border-t border-border pt-2 flex justify-between font-bold">
                       <span className="text-foreground">المطلوب</span>
                       <span className="text-primary text-lg">{getDiscountedPrice(selectedDoc.price)} جنيه</span>
