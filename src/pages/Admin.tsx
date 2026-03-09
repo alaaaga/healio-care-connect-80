@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Users, Calendar, FileText, Stethoscope, TrendingUp, CheckCircle2, Clock, XCircle,
   Plus, Trash2, Edit, Shield, Pill, Search, Upload, Image, Tag, Download, BarChart3,
-  CreditCard, Banknote
+  CreditCard, Banknote, Ticket, Percent
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
