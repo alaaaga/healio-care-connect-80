@@ -409,6 +409,68 @@ export default function AdminPage() {
     toast.success("تم حذف العرض");
   };
 
+  // Coupons CRUD
+  const openEditCoupon = (c: any) => {
+    setEditingCoupon(c);
+    setCouponForm({
+      code: c.code,
+      description: c.description || "",
+      discount_type: c.discount_type,
+      discount_value: c.discount_value,
+      min_amount: c.min_amount || 0,
+      max_uses: c.max_uses,
+      expires_at: c.expires_at ? new Date(c.expires_at).toISOString().slice(0, 16) : "",
+    });
+    setCouponDialogOpen(true);
+  };
+
+  const openAddCoupon = () => {
+    setEditingCoupon(null);
+    setCouponForm({ code: "", description: "", discount_type: "percentage", discount_value: 0, min_amount: 0, max_uses: null, expires_at: "" });
+    setCouponDialogOpen(true);
+  };
+
+  const saveCoupon = async () => {
+    const payload = {
+      code: couponForm.code.toUpperCase().trim(),
+      description: couponForm.description,
+      discount_type: couponForm.discount_type,
+      discount_value: couponForm.discount_value,
+      min_amount: couponForm.min_amount || null,
+      max_uses: couponForm.max_uses || null,
+      expires_at: couponForm.expires_at ? new Date(couponForm.expires_at).toISOString() : null,
+      is_active: true,
+    };
+    if (editingCoupon) {
+      const { error } = await supabase.from("coupons").update(payload).eq("id", editingCoupon.id);
+      if (!error) {
+        toast.success("تم تعديل الكوبون");
+        setCoupons((prev) => prev.map((c) => c.id === editingCoupon.id ? { ...c, ...payload } : c));
+      } else toast.error("حدث خطأ: " + error.message);
+    } else {
+      const { error } = await supabase.from("coupons").insert(payload);
+      if (!error) {
+        toast.success("تم إضافة الكوبون");
+        const { data } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
+        setCoupons(data || []);
+      } else toast.error("حدث خطأ: " + error.message);
+    }
+    setCouponDialogOpen(false);
+    setEditingCoupon(null);
+  };
+
+  const deleteCoupon = async (id: string) => {
+    await supabase.from("coupons").delete().eq("id", id);
+    setCoupons((prev) => prev.filter((c) => c.id !== id));
+    toast.success("تم حذف الكوبون");
+  };
+
+  const toggleCouponActive = async (id: string, isActive: boolean) => {
+    await supabase.from("coupons").update({ is_active: isActive }).eq("id", id);
+    setCoupons((prev) => prev.map((c) => c.id === id ? { ...c, is_active: isActive } : c));
+    toast.success(isActive ? "تم تفعيل الكوبون" : "تم إيقاف الكوبون");
+  };
+
   const filteredBookings = bookingFilter === "all" ? bookings : bookings.filter((b) => b.status === bookingFilter);
 
   if (authLoading || loadingData) {
