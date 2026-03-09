@@ -933,6 +933,130 @@ export default function AdminPage() {
               </div>
             </TabsContent>
 
+            {/* Coupons */}
+            <TabsContent value="coupons">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h3 className="font-display font-bold text-foreground">إدارة الكوبونات</h3>
+                <Dialog open={couponDialogOpen} onOpenChange={(open) => { setCouponDialogOpen(open); if (!open) setEditingCoupon(null); }}>
+                  <DialogTrigger asChild>
+                    <Button onClick={openAddCoupon} className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة كوبون</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader><DialogTitle className="font-display">{editingCoupon ? "تعديل الكوبون" : "إضافة كوبون جديد"}</DialogTitle></DialogHeader>
+                    <div className="space-y-4">
+                      <div><Label>كود الكوبون</Label><Input placeholder="مثال: SAVE20" value={couponForm.code} onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })} /></div>
+                      <div><Label>الوصف (اختياري)</Label><Textarea value={couponForm.description} onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })} /></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>نوع الخصم</Label>
+                          <Select value={couponForm.discount_type} onValueChange={(val) => setCouponForm({ ...couponForm, discount_type: val })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
+                              <SelectItem value="fixed">مبلغ ثابت (جنيه)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>قيمة الخصم</Label>
+                          <Input type="number" min={0} value={couponForm.discount_value} onChange={(e) => setCouponForm({ ...couponForm, discount_value: Number(e.target.value) })} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>الحد الأدنى للطلب (جنيه)</Label>
+                          <Input type="number" min={0} value={couponForm.min_amount} onChange={(e) => setCouponForm({ ...couponForm, min_amount: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <Label>الحد الأقصى للاستخدام</Label>
+                          <Input type="number" min={0} placeholder="غير محدود" value={couponForm.max_uses || ""} onChange={(e) => setCouponForm({ ...couponForm, max_uses: e.target.value ? Number(e.target.value) : null })} />
+                        </div>
+                      </div>
+                      <div><Label>تاريخ الانتهاء</Label><Input type="datetime-local" value={couponForm.expires_at} onChange={(e) => setCouponForm({ ...couponForm, expires_at: e.target.value })} /></div>
+                      <Button onClick={saveCoupon} className="w-full gradient-hero-bg text-primary-foreground border-0">{editingCoupon ? "حفظ التعديلات" : "إضافة الكوبون"}</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Coupon Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                {[
+                  { label: "إجمالي الكوبونات", value: coupons.length, icon: Ticket, color: "text-primary" },
+                  { label: "نشطة", value: coupons.filter(c => c.is_active).length, icon: CheckCircle2, color: "text-medical-green" },
+                  { label: "مستخدمة", value: coupons.reduce((s, c) => s + c.used_count, 0), icon: Tag, color: "text-medical-blue" },
+                  { label: "منتهية", value: coupons.filter(c => c.expires_at && new Date(c.expires_at) < new Date()).length, icon: XCircle, color: "text-destructive" },
+                ].map((stat) => (
+                  <div key={stat.label} className="glass-card rounded-2xl p-4 text-center">
+                    <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2`} />
+                    <p className="font-display font-bold text-lg text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="glass-card rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">الكود</TableHead>
+                        <TableHead className="text-right">الخصم</TableHead>
+                        <TableHead className="text-right">الحد الأدنى</TableHead>
+                        <TableHead className="text-right">الاستخدام</TableHead>
+                        <TableHead className="text-right">انتهاء الصلاحية</TableHead>
+                        <TableHead className="text-right">الحالة</TableHead>
+                        <TableHead className="text-right">إجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {coupons.map((c) => {
+                        const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
+                        return (
+                          <TableRow key={c.id} className={isExpired ? "opacity-60" : ""}>
+                            <TableCell className="font-mono font-bold text-primary">{c.code}</TableCell>
+                            <TableCell>
+                              <Badge className="bg-primary/10 text-primary border-0 gap-1">
+                                {c.discount_type === "percentage" ? <Percent className="w-3 h-3" /> : null}
+                                {c.discount_value}{c.discount_type === "percentage" ? "%" : " جنيه"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{c.min_amount ? `${c.min_amount} جنيه` : "—"}</TableCell>
+                            <TableCell>
+                              <span className="text-sm">{c.used_count}</span>
+                              {c.max_uses && <span className="text-muted-foreground">/{c.max_uses}</span>}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {c.expires_at ? (
+                                <span className={isExpired ? "text-destructive" : ""}>
+                                  {new Date(c.expires_at).toLocaleDateString("ar-EG")}
+                                </span>
+                              ) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Switch checked={c.is_active} onCheckedChange={(checked) => toggleCouponActive(c.id, checked)} />
+                                <span className="text-xs">{c.is_active ? "نشط" : "متوقف"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" className="text-primary" onClick={() => openEditCoupon(c)}><Edit className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteCoupon(c.id)}><Trash2 className="w-4 h-4" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {coupons.length === 0 && (
+                        <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">مافيش كوبونات</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </TabsContent>
+
             {/* Analytics */}
             <TabsContent value="analytics">
               <AnalyticsTab bookings={bookings} doctors={doctors} profiles={profiles} prescriptions={prescriptions} articles={articles} offers={offers} />
