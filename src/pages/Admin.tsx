@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Users, Calendar, FileText, Stethoscope, TrendingUp, CheckCircle2, Clock, XCircle,
   Plus, Trash2, Edit, Shield, Pill, Search, Upload, Image, Tag, Download, BarChart3,
-  CreditCard, Banknote
+  CreditCard, Banknote, Ticket, Percent
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
@@ -111,6 +113,15 @@ export default function AdminPage() {
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<any>(null);
 
+  // Coupons state
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponForm, setCouponForm] = useState({
+    code: "", description: "", discount_type: "percentage", discount_value: 0,
+    min_amount: 0, max_uses: null as number | null, expires_at: ""
+  });
+  const [couponDialogOpen, setCouponDialogOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<any>(null);
+
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
       navigate("/");
@@ -121,7 +132,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!user || !isAdmin) return;
     const fetchAll = async () => {
-      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }, { data: o }, { data: ur }, { data: pay }] = await Promise.all([
+      const [{ data: d }, { data: b }, { data: a }, { data: p }, { data: pr }, { data: o }, { data: ur }, { data: pay }, { data: coup }] = await Promise.all([
         supabase.from("doctors").select("*").order("created_at", { ascending: false }),
         supabase.from("bookings").select("*, doctors(name, specialty)").order("created_at", { ascending: false }),
         supabase.from("articles").select("*").order("created_at", { ascending: false }),
@@ -130,6 +141,7 @@ export default function AdminPage() {
         supabase.from("offers").select("*").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("*").order("user_id"),
         supabase.from("payments").select("*, bookings(booking_date, doctors(name))").order("created_at", { ascending: false }),
+        supabase.from("coupons").select("*").order("created_at", { ascending: false }),
       ]);
       const profileMap = new Map((p || []).map((prof: any) => [prof.user_id, prof.full_name]));
       const bookingsWithNames = (b || []).map((booking: any) => ({
@@ -147,6 +159,7 @@ export default function AdminPage() {
       setPrescriptions(prescsWithNames);
       setOffers(o || []);
       setUserRoles(ur || []);
+      setCoupons(coup || []);
       const payWithNames = (pay || []).map((pm: any) => ({
         ...pm,
         patient_name: profileMap.get(pm.user_id) || "مستخدم",
@@ -396,6 +409,68 @@ export default function AdminPage() {
     toast.success("تم حذف العرض");
   };
 
+  // Coupons CRUD
+  const openEditCoupon = (c: any) => {
+    setEditingCoupon(c);
+    setCouponForm({
+      code: c.code,
+      description: c.description || "",
+      discount_type: c.discount_type,
+      discount_value: c.discount_value,
+      min_amount: c.min_amount || 0,
+      max_uses: c.max_uses,
+      expires_at: c.expires_at ? new Date(c.expires_at).toISOString().slice(0, 16) : "",
+    });
+    setCouponDialogOpen(true);
+  };
+
+  const openAddCoupon = () => {
+    setEditingCoupon(null);
+    setCouponForm({ code: "", description: "", discount_type: "percentage", discount_value: 0, min_amount: 0, max_uses: null, expires_at: "" });
+    setCouponDialogOpen(true);
+  };
+
+  const saveCoupon = async () => {
+    const payload = {
+      code: couponForm.code.toUpperCase().trim(),
+      description: couponForm.description,
+      discount_type: couponForm.discount_type,
+      discount_value: couponForm.discount_value,
+      min_amount: couponForm.min_amount || null,
+      max_uses: couponForm.max_uses || null,
+      expires_at: couponForm.expires_at ? new Date(couponForm.expires_at).toISOString() : null,
+      is_active: true,
+    };
+    if (editingCoupon) {
+      const { error } = await supabase.from("coupons").update(payload).eq("id", editingCoupon.id);
+      if (!error) {
+        toast.success("تم تعديل الكوبون");
+        setCoupons((prev) => prev.map((c) => c.id === editingCoupon.id ? { ...c, ...payload } : c));
+      } else toast.error("حدث خطأ: " + error.message);
+    } else {
+      const { error } = await supabase.from("coupons").insert(payload);
+      if (!error) {
+        toast.success("تم إضافة الكوبون");
+        const { data } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
+        setCoupons(data || []);
+      } else toast.error("حدث خطأ: " + error.message);
+    }
+    setCouponDialogOpen(false);
+    setEditingCoupon(null);
+  };
+
+  const deleteCoupon = async (id: string) => {
+    await supabase.from("coupons").delete().eq("id", id);
+    setCoupons((prev) => prev.filter((c) => c.id !== id));
+    toast.success("تم حذف الكوبون");
+  };
+
+  const toggleCouponActive = async (id: string, isActive: boolean) => {
+    await supabase.from("coupons").update({ is_active: isActive }).eq("id", id);
+    setCoupons((prev) => prev.map((c) => c.id === id ? { ...c, is_active: isActive } : c));
+    toast.success(isActive ? "تم تفعيل الكوبون" : "تم إيقاف الكوبون");
+  };
+
   const filteredBookings = bookingFilter === "all" ? bookings : bookings.filter((b) => b.status === bookingFilter);
 
   if (authLoading || loadingData) {
@@ -475,17 +550,21 @@ export default function AdminPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full justify-start bg-muted/50 p-1 rounded-xl mb-6 flex-wrap">
-              <TabsTrigger value="overview" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><TrendingUp className="w-4 h-4" />نظرة عامة</TabsTrigger>
-              <TabsTrigger value="doctors" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Stethoscope className="w-4 h-4" />الأطباء</TabsTrigger>
-              <TabsTrigger value="bookings" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Calendar className="w-4 h-4" />الحجوزات</TabsTrigger>
-              <TabsTrigger value="prescriptions" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Pill className="w-4 h-4" />الروشتات</TabsTrigger>
-              <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" />المقالات</TabsTrigger>
-              <TabsTrigger value="offers" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Tag className="w-4 h-4" />العروض</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" />المستخدمين</TabsTrigger>
-              <TabsTrigger value="payments" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><CreditCard className="w-4 h-4" />المدفوعات</TabsTrigger>
-              <TabsTrigger value="analytics" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><BarChart3 className="w-4 h-4" />التحليلات</TabsTrigger>
-            </TabsList>
+            <ScrollArea className="w-full whitespace-nowrap mb-6">
+              <TabsList className="inline-flex w-max bg-muted/50 p-1 rounded-xl gap-1">
+                <TabsTrigger value="overview" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><TrendingUp className="w-4 h-4" /><span className="hidden sm:inline">نظرة عامة</span><span className="sm:hidden">عام</span></TabsTrigger>
+                <TabsTrigger value="doctors" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Stethoscope className="w-4 h-4" /><span className="hidden sm:inline">الأطباء</span><span className="sm:hidden">أطباء</span></TabsTrigger>
+                <TabsTrigger value="bookings" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Calendar className="w-4 h-4" /><span className="hidden sm:inline">الحجوزات</span><span className="sm:hidden">حجز</span></TabsTrigger>
+                <TabsTrigger value="prescriptions" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Pill className="w-4 h-4" /><span className="hidden sm:inline">الروشتات</span><span className="sm:hidden">روشتة</span></TabsTrigger>
+                <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" /><span className="hidden sm:inline">المقالات</span><span className="sm:hidden">مقالات</span></TabsTrigger>
+                <TabsTrigger value="offers" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Tag className="w-4 h-4" /><span className="hidden sm:inline">العروض</span><span className="sm:hidden">عروض</span></TabsTrigger>
+                <TabsTrigger value="coupons" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Ticket className="w-4 h-4" /><span className="hidden sm:inline">الكوبونات</span><span className="sm:hidden">كوبون</span></TabsTrigger>
+                <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" /><span className="hidden sm:inline">المستخدمين</span><span className="sm:hidden">مستخدم</span></TabsTrigger>
+                <TabsTrigger value="payments" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><CreditCard className="w-4 h-4" /><span className="hidden sm:inline">المدفوعات</span><span className="sm:hidden">دفع</span></TabsTrigger>
+                <TabsTrigger value="analytics" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><BarChart3 className="w-4 h-4" /><span className="hidden sm:inline">التحليلات</span><span className="sm:hidden">تحليل</span></TabsTrigger>
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
 
             {/* Overview */}
             <TabsContent value="overview">
@@ -549,7 +628,8 @@ export default function AdminPage() {
                 </Dialog>
               </div>
               <div className="glass-card rounded-2xl overflow-hidden">
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow><TableHead className="text-right">الصورة</TableHead><TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">التخصص</TableHead><TableHead className="text-right">الموقع</TableHead><TableHead className="text-right">السعر</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
@@ -572,7 +652,8 @@ export default function AdminPage() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
@@ -597,7 +678,8 @@ export default function AdminPage() {
                 </div>
               </div>
               <div className="glass-card rounded-2xl overflow-hidden">
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow><TableHead className="text-right">المريض</TableHead><TableHead className="text-right">الطبيب</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">النوع</TableHead><TableHead className="text-right">الحالة</TableHead><TableHead className="text-right">الطابور</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
@@ -652,7 +734,8 @@ export default function AdminPage() {
                       <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">مافيش حجوزات</TableCell></TableRow>
                     )}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
@@ -702,7 +785,8 @@ export default function AdminPage() {
                 </Dialog>
               </div>
               <div className="glass-card rounded-2xl overflow-hidden">
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">المريض</TableHead>
@@ -740,7 +824,8 @@ export default function AdminPage() {
                       <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">مافيش روشتات</TableCell></TableRow>
                     )}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
@@ -767,8 +852,9 @@ export default function AdminPage() {
                 </Dialog>
               </div>
               <div className="glass-card rounded-2xl overflow-hidden">
-                <Table>
-                  <TableHeader>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
                     <TableRow><TableHead className="text-right">الصورة</TableHead><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">التصنيف</TableHead><TableHead className="text-right">الكاتب</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
@@ -790,7 +876,8 @@ export default function AdminPage() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
@@ -827,7 +914,8 @@ export default function AdminPage() {
                 </Dialog>
               </div>
               <div className="glass-card rounded-2xl overflow-hidden">
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">الخصم</TableHead><TableHead className="text-right">الشارة</TableHead><TableHead className="text-right">ينتهي في</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
@@ -850,7 +938,132 @@ export default function AdminPage() {
                       <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">مافيش عروض</TableCell></TableRow>
                     )}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Coupons */}
+            <TabsContent value="coupons">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h3 className="font-display font-bold text-foreground">إدارة الكوبونات</h3>
+                <Dialog open={couponDialogOpen} onOpenChange={(open) => { setCouponDialogOpen(open); if (!open) setEditingCoupon(null); }}>
+                  <DialogTrigger asChild>
+                    <Button onClick={openAddCoupon} className="gradient-hero-bg text-primary-foreground border-0 gap-2"><Plus className="w-4 h-4" />إضافة كوبون</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader><DialogTitle className="font-display">{editingCoupon ? "تعديل الكوبون" : "إضافة كوبون جديد"}</DialogTitle></DialogHeader>
+                    <div className="space-y-4">
+                      <div><Label>كود الكوبون</Label><Input placeholder="مثال: SAVE20" value={couponForm.code} onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })} /></div>
+                      <div><Label>الوصف (اختياري)</Label><Textarea value={couponForm.description} onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })} /></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>نوع الخصم</Label>
+                          <Select value={couponForm.discount_type} onValueChange={(val) => setCouponForm({ ...couponForm, discount_type: val })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
+                              <SelectItem value="fixed">مبلغ ثابت (جنيه)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>قيمة الخصم</Label>
+                          <Input type="number" min={0} value={couponForm.discount_value} onChange={(e) => setCouponForm({ ...couponForm, discount_value: Number(e.target.value) })} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>الحد الأدنى للطلب (جنيه)</Label>
+                          <Input type="number" min={0} value={couponForm.min_amount} onChange={(e) => setCouponForm({ ...couponForm, min_amount: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <Label>الحد الأقصى للاستخدام</Label>
+                          <Input type="number" min={0} placeholder="غير محدود" value={couponForm.max_uses || ""} onChange={(e) => setCouponForm({ ...couponForm, max_uses: e.target.value ? Number(e.target.value) : null })} />
+                        </div>
+                      </div>
+                      <div><Label>تاريخ الانتهاء</Label><Input type="datetime-local" value={couponForm.expires_at} onChange={(e) => setCouponForm({ ...couponForm, expires_at: e.target.value })} /></div>
+                      <Button onClick={saveCoupon} className="w-full gradient-hero-bg text-primary-foreground border-0">{editingCoupon ? "حفظ التعديلات" : "إضافة الكوبون"}</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Coupon Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                {[
+                  { label: "إجمالي الكوبونات", value: coupons.length, icon: Ticket, color: "text-primary" },
+                  { label: "نشطة", value: coupons.filter(c => c.is_active).length, icon: CheckCircle2, color: "text-medical-green" },
+                  { label: "مستخدمة", value: coupons.reduce((s, c) => s + c.used_count, 0), icon: Tag, color: "text-medical-blue" },
+                  { label: "منتهية", value: coupons.filter(c => c.expires_at && new Date(c.expires_at) < new Date()).length, icon: XCircle, color: "text-destructive" },
+                ].map((stat) => (
+                  <div key={stat.label} className="glass-card rounded-2xl p-4 text-center">
+                    <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2`} />
+                    <p className="font-display font-bold text-lg text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="glass-card rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">الكود</TableHead>
+                        <TableHead className="text-right">الخصم</TableHead>
+                        <TableHead className="text-right">الحد الأدنى</TableHead>
+                        <TableHead className="text-right">الاستخدام</TableHead>
+                        <TableHead className="text-right">انتهاء الصلاحية</TableHead>
+                        <TableHead className="text-right">الحالة</TableHead>
+                        <TableHead className="text-right">إجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {coupons.map((c) => {
+                        const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
+                        return (
+                          <TableRow key={c.id} className={isExpired ? "opacity-60" : ""}>
+                            <TableCell className="font-mono font-bold text-primary">{c.code}</TableCell>
+                            <TableCell>
+                              <Badge className="bg-primary/10 text-primary border-0 gap-1">
+                                {c.discount_type === "percentage" ? <Percent className="w-3 h-3" /> : null}
+                                {c.discount_value}{c.discount_type === "percentage" ? "%" : " جنيه"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{c.min_amount ? `${c.min_amount} جنيه` : "—"}</TableCell>
+                            <TableCell>
+                              <span className="text-sm">{c.used_count}</span>
+                              {c.max_uses && <span className="text-muted-foreground">/{c.max_uses}</span>}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {c.expires_at ? (
+                                <span className={isExpired ? "text-destructive" : ""}>
+                                  {new Date(c.expires_at).toLocaleDateString("ar-EG")}
+                                </span>
+                              ) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Switch checked={c.is_active} onCheckedChange={(checked) => toggleCouponActive(c.id, checked)} />
+                                <span className="text-xs">{c.is_active ? "نشط" : "متوقف"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" className="text-primary" onClick={() => openEditCoupon(c)}><Edit className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteCoupon(c.id)}><Trash2 className="w-4 h-4" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {coupons.length === 0 && (
+                        <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">مافيش كوبونات</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
@@ -971,7 +1184,8 @@ export default function AdminPage() {
                 <Input placeholder="بحث بالاسم..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="w-full sm:w-64" />
               </div>
               <div className="glass-card rounded-2xl overflow-hidden">
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">الاسم</TableHead>
@@ -1063,7 +1277,8 @@ export default function AdminPage() {
                         );
                       })}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
 
               {/* Link Doctor Dialog */}
