@@ -37,6 +37,9 @@ export default function BookingPage() {
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
 
   // Load offer from URL params
   useEffect(() => {
@@ -88,17 +91,65 @@ export default function BookingPage() {
 
   const appliedDiscountPercentage = getOfferDiscountPercentage(appliedOffer);
 
+  // Coupon discount logic
+  const getCouponDiscount = (price: number) => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.discount_type === 'percentage') {
+      return Math.round(price * appliedCoupon.discount_value / 100);
+    }
+    return Math.min(appliedCoupon.discount_value, price);
+  };
+
   const getDiscountedPrice = (price: number) => {
-    if (appliedDiscountPercentage <= 0) return price;
-    return Math.round(price * (1 - appliedDiscountPercentage / 100));
+    let discounted = price;
+    if (appliedDiscountPercentage > 0) {
+      discounted = Math.round(price * (1 - appliedDiscountPercentage / 100));
+    }
+    if (appliedCoupon) {
+      discounted = discounted - getCouponDiscount(discounted);
+    }
+    return Math.max(0, discounted);
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    const selectedDoc = doctors.find((d) => d.id === selectedDoctor);
+    const amount = selectedDoc?.price || 0;
+    
+    const { data, error } = await supabase.rpc('validate_coupon', { _code: couponCode.trim(), _amount: amount });
+    
+    if (error || !data?.length) {
+      const msg = error?.message || '';
+      if (msg.includes('expired')) toast.error('الكوبون منتهي الصلاحية');
+      else if (msg.includes('min_amount')) toast.error('المبلغ أقل من الحد الأدنى للكوبون');
+      else if (msg.includes('max_uses')) toast.error('تم استنفاد عدد مرات استخدام الكوبون');
+      else toast.error('كوبون غير صالح');
+      setCouponLoading(false);
+      return;
+    }
+
+    setAppliedCoupon(data[0]);
+    toast.success(`تم تطبيق الكوبون — خصم ${data[0].discount_type === 'percentage' ? data[0].discount_value + '%' : data[0].discount_value + ' جنيه'}`);
+    setCouponLoading(false);
   };
 
   const handleConfirm = async () => {
     if (!user || !selectedDoctor || !selectedDate || !selectedTime || !paymentMethod) return;
     setSubmitting(true);
 
-    const selectedDoc = doctors.find((d) => d.id === selectedDoctor);
-    const finalAmount = selectedDoc ? getDiscountedPrice(selectedDoc.price) : 0;
+    // Redeem coupon if applied
+    if (appliedCoupon) {
+      const { error: redeemErr } = await supabase.rpc('redeem_coupon', { _code: appliedCoupon.code, _amount: selectedDoc?.price || 0 });
+      if (redeemErr) {
+        toast.error('فشل تطبيق الكوبون — حاول تاني');
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    const selectedDocLocal = doctors.find((d) => d.id === selectedDoctor);
+    const finalAmount = selectedDocLocal ? getDiscountedPrice(selectedDocLocal.price) : 0;
 
     const { data: bookingData, error } = await supabase.from("bookings").insert({
       user_id: user.id,
@@ -108,6 +159,7 @@ export default function BookingPage() {
       type: bookingType || "clinic",
       status: "pending",
       offer_id: appliedOffer?.id || null,
+      coupon_id: appliedCoupon?.id || null,
     }).select().single();
 
     if (error || !bookingData) {
@@ -125,6 +177,7 @@ export default function BookingPage() {
       status: paymentMethod === "cash" ? "pending" : "completed",
       card_last4: paymentMethod === "card" ? cardNumber.slice(-4) : "",
       transaction_ref: paymentMethod !== "cash" ? `TXN-${Date.now().toString(36).toUpperCase()}` : "",
+      coupon_code: appliedCoupon?.code || "",
     });
 
     setSubmitting(false);
@@ -348,7 +401,39 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              {/* Card Form (mock) */}
+
+              {/* Coupon Code Input */}
+              <div className="glass-card rounded-2xl p-6">
+                <h3 className="font-display font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <Tag className="w-4 h-4" />عندك كوبون خصم؟
+                </h3>
+                <div className="flex gap-2">
+                  <Input
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="أدخل كود الكوبون"
+                    dir="ltr"
+                    className="bg-muted/50 text-left tracking-wider flex-1"
+                    disabled={!!appliedCoupon}
+                  />
+                  {appliedCoupon ? (
+                    <Button variant="outline" className="text-destructive border-destructive/30" onClick={() => { setAppliedCoupon(null); setCouponCode(""); toast.info("تم إزالة الكوبون"); }}>
+                      إزالة
+                    </Button>
+                  ) : (
+                    <Button onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()} className="gradient-hero-bg text-primary-foreground border-0">
+                      {couponLoading ? "جاري التحقق..." : "تطبيق"}
+                    </Button>
+                  )}
+                </div>
+                {appliedCoupon && (
+                  <p className="text-xs text-primary mt-2 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    كوبون {appliedCoupon.code} — خصم {appliedCoupon.discount_type === 'percentage' ? appliedCoupon.discount_value + '%' : appliedCoupon.discount_value + ' جنيه'}
+                  </p>
+                )}
+              </div>
+
               {paymentMethod === "card" && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
                   <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -419,6 +504,12 @@ export default function BookingPage() {
                         <span>-{Math.round(selectedDoc.price * appliedDiscountPercentage / 100)} جنيه</span>
                       </div>
                     )}
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-primary">
+                        <span className="flex items-center gap-1"><Percent className="w-3.5 h-3.5" />كوبون {appliedCoupon.code}</span>
+                        <span>-{getCouponDiscount(appliedDiscountPercentage > 0 ? Math.round(selectedDoc.price * (1 - appliedDiscountPercentage / 100)) : selectedDoc.price)} جنيه</span>
+                      </div>
+                    )}
                     <div className="border-t border-border pt-2 flex justify-between font-bold">
                       <span className="text-foreground">المطلوب</span>
                       <span className="text-primary text-lg">{getDiscountedPrice(selectedDoc.price)} جنيه</span>
@@ -463,7 +554,10 @@ export default function BookingPage() {
                 {appliedOffer && (
                   <div className="flex justify-between"><span className="text-muted-foreground">العرض:</span><span className="font-medium text-primary">{appliedOffer.title} ({appliedOffer.discount})</span></div>
                 )}
-                {selectedDoc && appliedDiscountPercentage > 0 && (
+                {appliedCoupon && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">الكوبون:</span><span className="font-medium text-primary">{appliedCoupon.code} ({appliedCoupon.discount_type === 'percentage' ? appliedCoupon.discount_value + '%' : appliedCoupon.discount_value + ' جنيه'})</span></div>
+                )}
+                {selectedDoc && (appliedDiscountPercentage > 0 || appliedCoupon) && (
                   <div className="flex justify-between"><span className="text-muted-foreground">السعر بعد الخصم:</span><span className="font-bold text-primary">{getDiscountedPrice(selectedDoc.price)} جنيه</span></div>
                 )}
                 <div className="flex justify-between"><span className="text-muted-foreground">طريقة الدفع:</span><span className="font-medium text-foreground">{paymentMethod === "cash" ? "دفع عند الزيارة" : paymentMethod === "card" ? "بطاقة بنكية" : "محفظة إلكترونية"}</span></div>
@@ -472,7 +566,7 @@ export default function BookingPage() {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
                 <Link to="/dashboard"><Button variant="outline" className="gap-2">متابعة حجوزاتي</Button></Link>
-                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); setPaymentMethod(null); setCardNumber(""); setCardExpiry(""); setCardCvv(""); }}>حجز موعد آخر</Button>
+                <Button className="gradient-hero-bg text-primary-foreground border-0" onClick={() => { setStep("type"); setBookingType(null); setSelectedDoctor(null); setSelectedDate(undefined); setSelectedTime(null); setAppliedOffer(null); setAppliedCoupon(null); setCouponCode(""); setPaymentMethod(null); setCardNumber(""); setCardExpiry(""); setCardCvv(""); }}>حجز موعد آخر</Button>
               </div>
             </motion.div>
           )}
