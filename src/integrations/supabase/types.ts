@@ -503,6 +503,34 @@ export type Database = {
         }
         Returns: boolean
       }
+      redeem_coupon: {
+        Args: { _amount: number; _code: string }
+        Returns: {
+          code: string
+          discount_type: string
+          discount_value: number
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_uses: number
+          min_amount: number
+          used_count: number
+        }[]
+      }
+      validate_coupon: {
+        Args: { _amount: number; _code: string }
+        Returns: {
+          code: string
+          discount_type: string
+          discount_value: number
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_uses: number
+          min_amount: number
+          used_count: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "doctor"
