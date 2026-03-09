@@ -1277,7 +1277,8 @@ export default function AdminPage() {
                         );
                       })}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
 
               {/* Link Doctor Dialog */}
