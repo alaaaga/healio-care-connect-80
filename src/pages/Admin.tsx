@@ -938,7 +938,8 @@ export default function AdminPage() {
                       <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">مافيش عروض</TableCell></TableRow>
                     )}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
