@@ -389,7 +389,39 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              {/* Card Form (mock) */}
+
+              {/* Coupon Code Input */}
+              <div className="glass-card rounded-2xl p-6">
+                <h3 className="font-display font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <Tag className="w-4 h-4" />عندك كوبون خصم؟
+                </h3>
+                <div className="flex gap-2">
+                  <Input
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="أدخل كود الكوبون"
+                    dir="ltr"
+                    className="bg-muted/50 text-left tracking-wider flex-1"
+                    disabled={!!appliedCoupon}
+                  />
+                  {appliedCoupon ? (
+                    <Button variant="outline" className="text-destructive border-destructive/30" onClick={() => { setAppliedCoupon(null); setCouponCode(""); toast.info("تم إزالة الكوبون"); }}>
+                      إزالة
+                    </Button>
+                  ) : (
+                    <Button onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()} className="gradient-hero-bg text-primary-foreground border-0">
+                      {couponLoading ? "جاري التحقق..." : "تطبيق"}
+                    </Button>
+                  )}
+                </div>
+                {appliedCoupon && (
+                  <p className="text-xs text-primary mt-2 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    كوبون {appliedCoupon.code} — خصم {appliedCoupon.discount_type === 'percentage' ? appliedCoupon.discount_value + '%' : appliedCoupon.discount_value + ' جنيه'}
+                  </p>
+                )}
+              </div>
+
               {paymentMethod === "card" && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
                   <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
