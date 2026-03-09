@@ -138,8 +138,18 @@ export default function BookingPage() {
     if (!user || !selectedDoctor || !selectedDate || !selectedTime || !paymentMethod) return;
     setSubmitting(true);
 
-    const selectedDoc = doctors.find((d) => d.id === selectedDoctor);
-    const finalAmount = selectedDoc ? getDiscountedPrice(selectedDoc.price) : 0;
+    // Redeem coupon if applied
+    if (appliedCoupon) {
+      const { error: redeemErr } = await supabase.rpc('redeem_coupon', { _code: appliedCoupon.code, _amount: selectedDoc?.price || 0 });
+      if (redeemErr) {
+        toast.error('فشل تطبيق الكوبون — حاول تاني');
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    const selectedDocLocal = doctors.find((d) => d.id === selectedDoctor);
+    const finalAmount = selectedDocLocal ? getDiscountedPrice(selectedDocLocal.price) : 0;
 
     const { data: bookingData, error } = await supabase.from("bookings").insert({
       user_id: user.id,
@@ -149,6 +159,7 @@ export default function BookingPage() {
       type: bookingType || "clinic",
       status: "pending",
       offer_id: appliedOffer?.id || null,
+      coupon_id: appliedCoupon?.id || null,
     }).select().single();
 
     if (error || !bookingData) {
