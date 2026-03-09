@@ -177,6 +177,7 @@ export default function BookingPage() {
       status: paymentMethod === "cash" ? "pending" : "completed",
       card_last4: paymentMethod === "card" ? cardNumber.slice(-4) : "",
       transaction_ref: paymentMethod !== "cash" ? `TXN-${Date.now().toString(36).toUpperCase()}` : "",
+      coupon_code: appliedCoupon?.code || "",
     });
 
     setSubmitting(false);
