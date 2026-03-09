@@ -876,7 +876,8 @@ export default function AdminPage() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
