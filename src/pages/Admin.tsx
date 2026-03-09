@@ -734,7 +734,8 @@ export default function AdminPage() {
                       <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">مافيش حجوزات</TableCell></TableRow>
                     )}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
