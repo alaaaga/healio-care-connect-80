@@ -91,9 +91,47 @@ export default function BookingPage() {
 
   const appliedDiscountPercentage = getOfferDiscountPercentage(appliedOffer);
 
+  // Coupon discount logic
+  const getCouponDiscount = (price: number) => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.discount_type === 'percentage') {
+      return Math.round(price * appliedCoupon.discount_value / 100);
+    }
+    return Math.min(appliedCoupon.discount_value, price);
+  };
+
   const getDiscountedPrice = (price: number) => {
-    if (appliedDiscountPercentage <= 0) return price;
-    return Math.round(price * (1 - appliedDiscountPercentage / 100));
+    let discounted = price;
+    if (appliedDiscountPercentage > 0) {
+      discounted = Math.round(price * (1 - appliedDiscountPercentage / 100));
+    }
+    if (appliedCoupon) {
+      discounted = discounted - getCouponDiscount(discounted);
+    }
+    return Math.max(0, discounted);
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    const selectedDoc = doctors.find((d) => d.id === selectedDoctor);
+    const amount = selectedDoc?.price || 0;
+    
+    const { data, error } = await supabase.rpc('validate_coupon', { _code: couponCode.trim(), _amount: amount });
+    
+    if (error || !data?.length) {
+      const msg = error?.message || '';
+      if (msg.includes('expired')) toast.error('الكوبون منتهي الصلاحية');
+      else if (msg.includes('min_amount')) toast.error('المبلغ أقل من الحد الأدنى للكوبون');
+      else if (msg.includes('max_uses')) toast.error('تم استنفاد عدد مرات استخدام الكوبون');
+      else toast.error('كوبون غير صالح');
+      setCouponLoading(false);
+      return;
+    }
+
+    setAppliedCoupon(data[0]);
+    toast.success(`تم تطبيق الكوبون — خصم ${data[0].discount_type === 'percentage' ? data[0].discount_value + '%' : data[0].discount_value + ' جنيه'}`);
+    setCouponLoading(false);
   };
 
   const handleConfirm = async () => {
