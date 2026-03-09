@@ -914,7 +914,8 @@ export default function AdminPage() {
                 </Dialog>
               </div>
               <div className="glass-card rounded-2xl overflow-hidden">
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">الخصم</TableHead><TableHead className="text-right">الشارة</TableHead><TableHead className="text-right">ينتهي في</TableHead><TableHead className="text-right">إجراءات</TableHead></TableRow>
                   </TableHeader>
