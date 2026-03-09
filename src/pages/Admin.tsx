@@ -550,17 +550,21 @@ export default function AdminPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full justify-start bg-muted/50 p-1 rounded-xl mb-6 flex-wrap">
-              <TabsTrigger value="overview" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><TrendingUp className="w-4 h-4" />نظرة عامة</TabsTrigger>
-              <TabsTrigger value="doctors" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Stethoscope className="w-4 h-4" />الأطباء</TabsTrigger>
-              <TabsTrigger value="bookings" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Calendar className="w-4 h-4" />الحجوزات</TabsTrigger>
-              <TabsTrigger value="prescriptions" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Pill className="w-4 h-4" />الروشتات</TabsTrigger>
-              <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" />المقالات</TabsTrigger>
-              <TabsTrigger value="offers" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Tag className="w-4 h-4" />العروض</TabsTrigger>
-              <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" />المستخدمين</TabsTrigger>
-              <TabsTrigger value="payments" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><CreditCard className="w-4 h-4" />المدفوعات</TabsTrigger>
-              <TabsTrigger value="analytics" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><BarChart3 className="w-4 h-4" />التحليلات</TabsTrigger>
-            </TabsList>
+            <ScrollArea className="w-full whitespace-nowrap mb-6">
+              <TabsList className="inline-flex w-max bg-muted/50 p-1 rounded-xl gap-1">
+                <TabsTrigger value="overview" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><TrendingUp className="w-4 h-4" /><span className="hidden sm:inline">نظرة عامة</span><span className="sm:hidden">عام</span></TabsTrigger>
+                <TabsTrigger value="doctors" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Stethoscope className="w-4 h-4" /><span className="hidden sm:inline">الأطباء</span><span className="sm:hidden">أطباء</span></TabsTrigger>
+                <TabsTrigger value="bookings" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Calendar className="w-4 h-4" /><span className="hidden sm:inline">الحجوزات</span><span className="sm:hidden">حجز</span></TabsTrigger>
+                <TabsTrigger value="prescriptions" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Pill className="w-4 h-4" /><span className="hidden sm:inline">الروشتات</span><span className="sm:hidden">روشتة</span></TabsTrigger>
+                <TabsTrigger value="articles" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><FileText className="w-4 h-4" /><span className="hidden sm:inline">المقالات</span><span className="sm:hidden">مقالات</span></TabsTrigger>
+                <TabsTrigger value="offers" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Tag className="w-4 h-4" /><span className="hidden sm:inline">العروض</span><span className="sm:hidden">عروض</span></TabsTrigger>
+                <TabsTrigger value="coupons" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Ticket className="w-4 h-4" /><span className="hidden sm:inline">الكوبونات</span><span className="sm:hidden">كوبون</span></TabsTrigger>
+                <TabsTrigger value="users" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><Users className="w-4 h-4" /><span className="hidden sm:inline">المستخدمين</span><span className="sm:hidden">مستخدم</span></TabsTrigger>
+                <TabsTrigger value="payments" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><CreditCard className="w-4 h-4" /><span className="hidden sm:inline">المدفوعات</span><span className="sm:hidden">دفع</span></TabsTrigger>
+                <TabsTrigger value="analytics" className="rounded-lg gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"><BarChart3 className="w-4 h-4" /><span className="hidden sm:inline">التحليلات</span><span className="sm:hidden">تحليل</span></TabsTrigger>
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
 
             {/* Overview */}
             <TabsContent value="overview">
