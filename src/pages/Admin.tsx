@@ -113,6 +113,15 @@ export default function AdminPage() {
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<any>(null);
 
+  // Coupons state
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponForm, setCouponForm] = useState({
+    code: "", description: "", discount_type: "percentage", discount_value: 0,
+    min_amount: 0, max_uses: null as number | null, expires_at: ""
+  });
+  const [couponDialogOpen, setCouponDialogOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<any>(null);
+
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
       navigate("/");
