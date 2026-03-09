@@ -1184,7 +1184,8 @@ export default function AdminPage() {
                 <Input placeholder="بحث بالاسم..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="w-full sm:w-64" />
               </div>
               <div className="glass-card rounded-2xl overflow-hidden">
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">الاسم</TableHead>
