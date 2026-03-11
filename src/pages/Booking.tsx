@@ -180,6 +180,13 @@ export default function BookingPage() {
       coupon_code: appliedCoupon?.code || "",
     });
 
+    // Send SMS notification
+    supabase.functions.invoke("send-booking-sms", {
+      body: { booking_id: bookingData.id, status: "pending" },
+    }).then(({ error: smsErr }) => {
+      if (smsErr) console.error("SMS send error:", smsErr);
+    });
+
     setSubmitting(false);
     if (payError) {
       toast.error("تم الحجز لكن فشل تسجيل الدفع");

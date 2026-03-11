@@ -275,7 +275,13 @@ export default function AdminPage() {
   const updateBookingStatus = async (id: string, status: string) => {
     await supabase.from("bookings").update({ status }).eq("id", id);
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
-    toast.success("تم تحديث حالة الحجز");
+    // Send SMS notification on status change
+    supabase.functions.invoke("send-booking-sms", {
+      body: { booking_id: id, status },
+    }).then(({ error }) => {
+      if (error) console.error("SMS error:", error);
+    });
+    toast.success("تم تحديث حالة الحجز وإرسال إشعار");
   };
 
   const updateBookingQueue = async (id: string, queue_position: number | null, estimated_wait: string | null) => {
