@@ -284,10 +284,20 @@ export default function DashboardPage() {
                                   <div className="flex-1">
                                     <h4 className="font-semibold text-foreground">{booking.doctors?.name}</h4>
                                     <p className="text-sm text-primary">{booking.doctors?.specialty}</p>
-                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                                       <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{booking.booking_date}</span>
                                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{booking.booking_time}</span>
                                       <Badge variant="outline" className="text-xs">{booking.type === "online" ? "أونلاين" : "عيادة"}</Badge>
+                                      {booking.queue_position && booking.queue_position > 1 && (
+                                        <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 border text-xs gap-1">
+                                          <Users className="w-3 h-3" />قدامك: {booking.queue_position - 1}
+                                        </Badge>
+                                      )}
+                                      {booking.estimated_wait && (
+                                        <Badge className="bg-primary/10 text-primary border-primary/20 border text-xs gap-1">
+                                          <Timer className="w-3 h-3" />{booking.estimated_wait}
+                                        </Badge>
+                                      )}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">

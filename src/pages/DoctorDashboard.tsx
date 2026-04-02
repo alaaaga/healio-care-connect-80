@@ -174,6 +174,7 @@ export default function DoctorDashboardPage() {
                       <TableHead className="text-right">التاريخ</TableHead>
                       <TableHead className="text-right">الوقت</TableHead>
                       <TableHead className="text-right">النوع</TableHead>
+                      <TableHead className="text-right">الطابور</TableHead>
                       <TableHead className="text-right">الحالة</TableHead>
                       <TableHead className="text-right">إجراءات</TableHead>
                     </TableRow>
@@ -189,6 +190,16 @@ export default function DoctorDashboardPage() {
                           <TableCell>{b.booking_time}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{b.type === "online" ? "أونلاين" : "عيادة"}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs gap-1">
+                                <Users className="w-3 h-3" />#{b.queue_position || '-'}
+                              </Badge>
+                              {b.estimated_wait && (
+                                <span className="text-xs text-muted-foreground">{b.estimated_wait}</span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge className={`${config?.color || ""} border gap-1`}>
@@ -211,7 +222,7 @@ export default function DoctorDashboardPage() {
                     })}
                     {bookings.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">مافيش حجوزات لسه</TableCell>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">مافيش حجوزات لسه</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
