@@ -192,6 +192,16 @@ export default function DoctorDashboardPage() {
                             <Badge variant="outline">{b.type === "online" ? "أونلاين" : "عيادة"}</Badge>
                           </TableCell>
                           <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs gap-1">
+                                <Users className="w-3 h-3" />#{b.queue_position || '-'}
+                              </Badge>
+                              {b.estimated_wait && (
+                                <span className="text-xs text-muted-foreground">{b.estimated_wait}</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
                             <Badge className={`${config?.color || ""} border gap-1`}>
                               <StatusIcon className="w-3 h-3" />{config?.label || b.status}
                             </Badge>
