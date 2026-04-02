@@ -222,7 +222,7 @@ export default function DoctorDashboardPage() {
                     })}
                     {bookings.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">مافيش حجوزات لسه</TableCell>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">مافيش حجوزات لسه</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
