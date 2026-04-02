@@ -174,6 +174,7 @@ export default function DoctorDashboardPage() {
                       <TableHead className="text-right">التاريخ</TableHead>
                       <TableHead className="text-right">الوقت</TableHead>
                       <TableHead className="text-right">النوع</TableHead>
+                      <TableHead className="text-right">الطابور</TableHead>
                       <TableHead className="text-right">الحالة</TableHead>
                       <TableHead className="text-right">إجراءات</TableHead>
                     </TableRow>
